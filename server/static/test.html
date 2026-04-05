@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Webhook Tester</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#e8e8e8;font-family:'Courier New',monospace;padding:20px}
+.container{max-width:600px;margin:0 auto}
+h1{font-size:18px;margin-bottom:4px;color:#a78bfa}
+.sub{font-size:12px;color:#555;margin-bottom:16px}
+.section{border:1px solid #222;border-radius:6px;padding:12px;margin-bottom:12px}
+.section-title{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+select,button{background:#1a1a1a;color:#e8e8e8;border:1px solid #333;border-radius:4px;padding:6px 10px;font-family:inherit;font-size:12px;cursor:pointer}
+select:focus{outline:none;border-color:#58a6ff}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.btn-entry{background:#1a3a2a;color:#00ff88;border-color:#00ff88}
+.btn-cand{background:#2a2a1a;color:#ffaa00;border-color:#ffaa00}
+.btn-exit{background:#2a1a1a;color:#ff4466;border-color:#ff4466}
+.btn-ctx{background:#1a1a2e;color:#58a6ff;border-color:#58a6ff}
+.btn-reset{background:#1a1a1a;color:#888;border-color:#555}
+.btn-scenario{background:#1a1a2e;color:#a78bfa;border-color:rgba(167,139,250,0.3);padding:8px 14px}
+.log{background:#111;border-radius:4px;padding:8px;max-height:300px;overflow-y:auto;font-size:11px;line-height:1.7}
+.log-ok{color:#888}.log-err{color:#ff4466}.log-time{color:#333}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+</style></head><body>
+<div class="container">
+<h1>🧪 WEBHOOK TESTER</h1>
+<p class="sub">Send simulated events — open <a href="/" style="color:#58a6ff">dashboard</a> in another tab to watch</p>
+
+<div class="section">
+<div class="section-title">Quick Scenarios</div>
+<div class="btn-row">
+<button class="btn-scenario" onclick="runDemo()">🎬 Full Demo</button>
+<button class="btn-scenario" onclick="resetAll()">🧹 Reset All</button>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Manual Controls</div>
+<div class="row">
+<select id="ticker"><option>ES1!</option><option>MES1!</option><option>NQ1!</option><option>MNQ1!</option><option>YM1!</option><option>RTY1!</option><option>GC1!</option><option>MGC1!</option><option>CL1!</option><option>MCL1!</option></select>
+<select id="play"><option>HA</option><option>HB</option><option>HC</option><option>HD</option><option>HE</option><option>HF</option><option>LA</option><option>LB</option><option>LC</option><option>LD</option><option>LE</option><option>LF</option></select>
+</div>
+<div class="btn-row">
+<button class="btn-entry" onclick="send('entry')">▲ Entry</button>
+<button class="btn-cand" onclick="send('candidate')">◆ Candidate</button>
+<button class="btn-exit" onclick="send('exit')">✖ Exit</button>
+<button class="btn-reset" onclick="send('session_reset')">↺ Reset</button>
+</div>
+<div class="row" style="margin-top:10px">
+<select id="range"><option>Higher</option><option>Lower</option><option>Neutral</option></select>
+<select id="width"><option>Wide</option><option>Narrow</option><option>Similar</option></select>
+<select id="ds"><option>RTH</option><option>ETH</option></select>
+<button class="btn-ctx" onclick="sendContext()">Set Context</button>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title" style="display:flex;justify-content:space-between">
+<span>Event Log</span><button style="font-size:10px;padding:2px 8px" onclick="document.getElementById('log').innerHTML=''">Clear</button>
+</div>
+<div class="log" id="log"><span style="color:#333;font-style:italic">Click Full Demo to get started...</span></div>
+</div>
+</div>
+
+<script>
+function log(msg,ok=true){
+const t=new Date().toLocaleTimeString('en-US',{hour12:false});
+const el=document.getElementById('log');
+el.innerHTML=`<div class="${ok?'log-ok':'log-err'}"><span class="log-time">${t}</span> ${msg}</div>`+el.innerHTML;
+}
+
+async function post(body){
+const time=new Date().toISOString().replace('T',' ').substring(0,19);
+body.time=body.time||time;
+try{
+const r=await fetch('/webhook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const d=await r.json();
+if(r.ok)log(`✅ ${body.ticker} → ${body.event}${body.play?' '+body.play:''}${body.range?' ['+body.range+'/'+body.width+'/'+body.dataSource+']':''}`);
+else log(`❌ ${body.ticker}: ${d.error}`,false);
+}catch(e){log(`❌ ${e.message}`,false)}
+}
+
+function send(event){
+const ticker=document.getElementById('ticker').value;
+const play=document.getElementById('play').value;
+post({ticker,event,play});
+}
+
+function sendContext(){
+const ticker=document.getElementById('ticker').value;
+post({ticker,event:'context',range:document.getElementById('range').value,width:document.getElementById('width').value,dataSource:document.getElementById('ds').value});
+}
+
+async function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function runDemo(){
+log('▶ Running Full Demo...');
+const steps=[
+{ticker:'ES1!',event:'context',range:'Higher',width:'Wide',dataSource:'RTH'},
+{ticker:'NQ1!',event:'context',range:'Higher',width:'Narrow',dataSource:'ETH'},
+{ticker:'GC1!',event:'context',range:'Lower',width:'Wide',dataSource:'RTH'},
+{ticker:'YM1!',event:'context',range:'Neutral',width:'Similar',dataSource:'RTH'},
+{ticker:'RTY1!',event:'context',range:'Lower',width:'Narrow',dataSource:'ETH'},
+{ticker:'CL1!',event:'context',range:'Higher',width:'Wide',dataSource:'RTH'},
+{ticker:'ES1!',event:'candidate',play:'HA'},
+{ticker:'ES1!',event:'candidate',play:'HE'},
+{ticker:'NQ1!',event:'candidate',play:'HB'},
+{ticker:'NQ1!',event:'candidate',play:'HC'},
+{ticker:'GC1!',event:'candidate',play:'LA'},
+{ticker:'RTY1!',event:'candidate',play:'LB'},
+{ticker:'ES1!',event:'entry',play:'HA'},
+{ticker:'GC1!',event:'entry',play:'LA'},
+{ticker:'CL1!',event:'entry',play:'HA'},
+{ticker:'CL1!',event:'exit',play:'HA'},
+{ticker:'CL1!',event:'entry',play:'HE'},
+{ticker:'CL1!',event:'exit',play:'HE'},
+];
+for(const s of steps){await post(s);await sleep(300)}
+log('✅ Demo complete!');
+}
+
+async function resetAll(){
+log('▶ Resetting all...');
+const tickers=['ES1!','MES1!','NQ1!','MNQ1!','YM1!','RTY1!','GC1!','MGC1!','CL1!','MCL1!'];
+for(const t of tickers){await post({ticker:t,event:'session_reset'});await sleep(100)}
+log('✅ All reset!');
+}
+</script>
+</body></html>
