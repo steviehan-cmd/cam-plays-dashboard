@@ -16,10 +16,21 @@ import json
 import time as time_module
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
 
 app = Flask(__name__, static_folder="static")
-CORS(app)
+if CORS:
+    CORS(app)
+else:
+    @app.after_request
+    def add_cors(response):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        return response
 
 # ---- In-memory state store ----
 # Structure: { "ES1!": { "ticker", "exchange", "active", "candidates", "passed", "range", "width", "dataSource", "lastUpdate" } }
