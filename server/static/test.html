@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Webhook Tester</title>
+<title>EZ Cam Dashboard — Webhook Tester</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0a;color:#e8e8e8;font-family:'Courier New',monospace;padding:20px}
@@ -18,18 +18,21 @@ select:focus{outline:none;border-color:#58a6ff}
 .btn-ctx{background:#1a1a2e;color:#58a6ff;border-color:#58a6ff}
 .btn-reset{background:#1a1a1a;color:#888;border-color:#555}
 .btn-scenario{background:#1a1a2e;color:#a78bfa;border-color:rgba(167,139,250,0.3);padding:8px 14px}
+.btn-remove{background:#1a1a1a;color:#666;border-color:#444}
 .log{background:#111;border-radius:4px;padding:8px;max-height:300px;overflow-y:auto;font-size:11px;line-height:1.7}
 .log-ok{color:#888}.log-err{color:#ff4466}.log-time{color:#333}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+a{color:#58a6ff}
 </style></head><body>
 <div class="container">
-<h1>🧪 WEBHOOK TESTER</h1>
-<p class="sub">Send simulated events — open <a href="/" style="color:#58a6ff">dashboard</a> in another tab to watch</p>
+<h1>🧪 EZ CAM DASHBOARD — WEBHOOK TESTER</h1>
+<p class="sub">Send simulated events — open <a href="/">dashboard</a> in another tab to watch</p>
 
 <div class="section">
 <div class="section-title">Quick Scenarios</div>
 <div class="btn-row">
 <button class="btn-scenario" onclick="runDemo()">🎬 Full Demo</button>
+<button class="btn-scenario" onclick="runContextOnly()">📊 Context Only</button>
 <button class="btn-scenario" onclick="resetAll()">🧹 Reset All</button>
 </div>
 </div>
@@ -37,14 +40,27 @@ select:focus{outline:none;border-color:#58a6ff}
 <div class="section">
 <div class="section-title">Manual Controls</div>
 <div class="row">
-<select id="ticker"><option>ES1!</option><option>MES1!</option><option>NQ1!</option><option>MNQ1!</option><option>YM1!</option><option>RTY1!</option><option>GC1!</option><option>MGC1!</option><option>CL1!</option><option>MCL1!</option></select>
-<select id="play"><option>HA</option><option>HB</option><option>HC</option><option>HD</option><option>HE</option><option>HF</option><option>LA</option><option>LB</option><option>LC</option><option>LD</option><option>LE</option><option>LF</option></select>
+<select id="ticker">
+<option>MES1!</option>
+<option>MNQ1!</option>
+<option>MYM1!</option>
+<option>M2K1!</option>
+<option>MGC1!</option>
+<option>SIL1!</option>
+<option>MCL1!</option>
+<option>MBT1!</option>
+</select>
+<select id="play">
+<option>HA</option><option>HB</option><option>HC</option><option>HD</option><option>HE</option><option>HF</option>
+<option>LA</option><option>LB</option><option>LC</option><option>LD</option><option>LE</option><option>LF</option>
+</select>
 </div>
 <div class="btn-row">
 <button class="btn-entry" onclick="send('entry')">▲ Entry</button>
 <button class="btn-cand" onclick="send('candidate')">◆ Candidate</button>
+<button class="btn-remove" onclick="send('candidate_remove')">◇ Remove Cand.</button>
 <button class="btn-exit" onclick="send('exit')">✖ Exit</button>
-<button class="btn-reset" onclick="send('session_reset')">↺ Reset</button>
+<button class="btn-reset" onclick="send('session_reset')">↺ Reset Ticker</button>
 </div>
 <div class="row" style="margin-top:10px">
 <select id="range"><option>Higher</option><option>Lower</option><option>Neutral</option></select>
@@ -58,11 +74,13 @@ select:focus{outline:none;border-color:#58a6ff}
 <div class="section-title" style="display:flex;justify-content:space-between">
 <span>Event Log</span><button style="font-size:10px;padding:2px 8px" onclick="document.getElementById('log').innerHTML=''">Clear</button>
 </div>
-<div class="log" id="log"><span style="color:#333;font-style:italic">Click Full Demo to get started...</span></div>
+<div class="log" id="log"><span style="color:#333;font-style:italic">Click a scenario to get started...</span></div>
 </div>
 </div>
 
 <script>
+const TICKERS = ["MES1!","MNQ1!","MYM1!","M2K1!","MGC1!","SIL1!","MCL1!","MBT1!"];
+
 function log(msg,ok=true){
 const t=new Date().toLocaleTimeString('en-US',{hour12:false});
 const el=document.getElementById('log');
@@ -93,36 +111,58 @@ post({ticker,event:'context',range:document.getElementById('range').value,width:
 
 async function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
+async function runContextOnly(){
+log('▶ Sending context for all tickers...');
+const contexts=[
+{ticker:'MES1!',range:'Higher',width:'Wide',dataSource:'RTH'},
+{ticker:'MNQ1!',range:'Higher',width:'Narrow',dataSource:'ETH'},
+{ticker:'MYM1!',range:'Neutral',width:'Similar',dataSource:'RTH'},
+{ticker:'M2K1!',range:'Lower',width:'Narrow',dataSource:'ETH'},
+{ticker:'MGC1!',range:'Lower',width:'Wide',dataSource:'RTH'},
+{ticker:'SIL1!',range:'Higher',width:'Wide',dataSource:'RTH'},
+{ticker:'MCL1!',range:'Higher',width:'Narrow',dataSource:'ETH'},
+{ticker:'MBT1!',range:'Lower',width:'Wide',dataSource:'RTH'},
+];
+for(const c of contexts){await post({...c,event:'context'});await sleep(200)}
+log('✅ Context set for all tickers');
+}
+
 async function runDemo(){
 log('▶ Running Full Demo...');
-const steps=[
-{ticker:'ES1!',event:'context',range:'Higher',width:'Wide',dataSource:'RTH'},
-{ticker:'NQ1!',event:'context',range:'Higher',width:'Narrow',dataSource:'ETH'},
-{ticker:'GC1!',event:'context',range:'Lower',width:'Wide',dataSource:'RTH'},
-{ticker:'YM1!',event:'context',range:'Neutral',width:'Similar',dataSource:'RTH'},
-{ticker:'RTY1!',event:'context',range:'Lower',width:'Narrow',dataSource:'ETH'},
-{ticker:'CL1!',event:'context',range:'Higher',width:'Wide',dataSource:'RTH'},
-{ticker:'ES1!',event:'candidate',play:'HA'},
-{ticker:'ES1!',event:'candidate',play:'HE'},
-{ticker:'NQ1!',event:'candidate',play:'HB'},
-{ticker:'NQ1!',event:'candidate',play:'HC'},
-{ticker:'GC1!',event:'candidate',play:'LA'},
-{ticker:'RTY1!',event:'candidate',play:'LB'},
-{ticker:'ES1!',event:'entry',play:'HA'},
-{ticker:'GC1!',event:'entry',play:'LA'},
-{ticker:'CL1!',event:'entry',play:'HA'},
-{ticker:'CL1!',event:'exit',play:'HA'},
-{ticker:'CL1!',event:'entry',play:'HE'},
-{ticker:'CL1!',event:'exit',play:'HE'},
+// Reset first
+for(const t of TICKERS){await post({ticker:t,event:'session_reset'});await sleep(100)}
+await sleep(300);
+// Context
+await runContextOnly();
+await sleep(300);
+// Candidates
+const cands=[
+{ticker:'MES1!',play:'HA'},{ticker:'MES1!',play:'HE'},
+{ticker:'MNQ1!',play:'HB'},{ticker:'MNQ1!',play:'HC'},
+{ticker:'M2K1!',play:'LA'},{ticker:'M2K1!',play:'LB'},
+{ticker:'MGC1!',play:'LA'},
+{ticker:'SIL1!',play:'HA'},
+{ticker:'MBT1!',play:'LA'},{ticker:'MBT1!',play:'LE'},
 ];
-for(const s of steps){await post(s);await sleep(300)}
+log('▶ Sending candidates...');
+for(const c of cands){await post({ticker:c.ticker,event:'candidate',play:c.play});await sleep(200)}
+await sleep(500);
+// Entries
+log('▶ Triggering entries...');
+await post({ticker:'MES1!',event:'entry',play:'HA'});await sleep(300);
+await post({ticker:'M2K1!',event:'entry',play:'LB'});await sleep(300);
+await post({ticker:'MCL1!',event:'entry',play:'HB'});await sleep(300);
+// An exit then re-entry
+await post({ticker:'SIL1!',event:'entry',play:'HA'});await sleep(300);
+await post({ticker:'SIL1!',event:'exit',play:'HA'});await sleep(300);
+await post({ticker:'SIL1!',event:'entry',play:'HE'});await sleep(300);
+await post({ticker:'SIL1!',event:'exit',play:'HE'});await sleep(300);
 log('✅ Demo complete!');
 }
 
 async function resetAll(){
-log('▶ Resetting all...');
-const tickers=['ES1!','MES1!','NQ1!','MNQ1!','YM1!','RTY1!','GC1!','MGC1!','CL1!','MCL1!'];
-for(const t of tickers){await post({ticker:t,event:'session_reset'});await sleep(100)}
+log('▶ Resetting all tickers...');
+for(const t of TICKERS){await post({ticker:t,event:'session_reset'});await sleep(100)}
 log('✅ All reset!');
 }
 </script>
