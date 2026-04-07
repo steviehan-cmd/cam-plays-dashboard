@@ -183,8 +183,13 @@ function renderRow(inst){
   const ex=EXCHANGES[inst.ticker]||inst.exchange||'';
   const url=ex?'https://www.tradingview.com/chart/?symbol='+ex+':'+inst.ticker:'#';
   const inactive=s==='idle'||s==='passed';
-  const range=inst.range||'Neutral';
+  // Normalize range — handle "Higher Range", "Higher", "higher" etc
+  const rawRange=inst.range||'';
+  const range=rawRange.toLowerCase().includes('higher')?'Higher':rawRange.toLowerCase().includes('lower')?'Lower':'Neutral';
   const rc=range==='Higher'?'ctx-h':range==='Lower'?'ctx-l':'ctx-n';
+  // Normalize width — handle "Wide pivots", "Wide", "Narrow pivots" etc
+  const rawWidth=inst.width||'';
+  const width=rawWidth.toLowerCase().includes('wide')?'Wide':rawWidth.toLowerCase().includes('narrow')?'Narrow':rawWidth.toLowerCase().includes('similar')?'Similar':'—';
   const wm={Wide:'W',Narrow:'N',Similar:'~',Versatile:'V'};
   const hasTime=inst.active||inst.candidates&&inst.candidates.length;
   const ts=hasTime?fmtTime(inst.lastUpdate):'';
@@ -198,9 +203,9 @@ function renderRow(inst){
           (ts?'<span class="mono ticker-ts" style="color:'+(s==='active'?'#555':'#333')+'">'+ts+'</span>':'')+
         '</div>'+
         '<div class="ticker-ctx mono">'+
-          '<span class="'+rc+'">'+(inst.range?inst.range[0]:'—')+'</span>'+
+          '<span class="'+rc+'">'+range[0]+'</span>'+
           '<span class="ctx-sep">·</span>'+
-          '<span style="color:#444">'+(wm[inst.width]||'—')+'</span>'+
+          '<span style="color:#444">'+(wm[width]||'—')+'</span>'+
           '<span class="ctx-sep">·</span>'+
           '<span class="'+(inst.dataSource==='ETH'?'ctx-eth':'')+'" style="color:'+(inst.dataSource==='ETH'?'#a78bfa':'#444')+'">'+(inst.dataSource||'—')+'</span>'+
         '</div>'+
