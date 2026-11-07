@@ -2,9 +2,15 @@
 CAM PLAYS Dashboard Server
 Receives TradingView webhook alerts and serves a real-time dashboard.
 
-Supports two alert formats:
-1. JSON: {"ticker":"ES1!","event":"entry","play":"HA","time":"..."}
-2. Text:  "HA entry event on ES1! at 09:42:00"
+Supports three alert formats:
+1. EZCam V12 (one message per bar close, events + full snapshot):
+   {"source":"EZCam V12","v":1,"ticker":"MES1!","time":"...",
+    "events":[{"event":"entry","play":"HA"}, ...],
+    "snapshot":{"range":"Higher Range","width":"Wide pivots","dataSource":"Daily","price":5858.25,
+                "levels":{"S6":..,"S5":..,"S4":..,"S3":..,"CP":..,"R3":..,"R4":..,"R5":..,"R6":..},
+                "active":"HA"|null,"candidates":["HB"],"passed":["LA"]}}
+2. Legacy JSON (EZ Cam Dashboard V3): {"ticker":"ES1!","event":"entry","play":"HA","time":"..."}
+3. Legacy text:  "HA entry event on ES1! at 09:42:00"
 """
 
 import os
@@ -64,6 +70,7 @@ def get_or_create_instrument(ticker):
             "active": None, "activeDirection": None, "activeDesc": None,
             "candidates": [], "passed": [],
             "range": None, "width": None, "dataSource": None, "lastUpdate": None,
+            "price": None, "levels": None, "source": None,
         }
     return instruments[ticker]
 
@@ -72,7 +79,8 @@ def reset_session(ticker):
     inst = get_or_create_instrument(ticker)
     inst.update({"active": None, "activeDirection": None, "activeDesc": None,
                  "candidates": [], "passed": [], "range": None, "width": None,
-                 "dataSource": None, "lastUpdate": datetime.now(timezone.utc).isoformat()})
+                 "dataSource": None, "price": None, "levels": None,
+                 "lastUpdate": datetime.now(timezone.utc).isoformat()})
 
 
 def process_entry(ticker, play, alert_time):
@@ -110,18 +118,57 @@ def webhook():
             return jsonify(result), code
         return jsonify({"error": "Could not parse alert"}), 400
 
-    ticker = data.get("ticker", "").strip()
-    event = data.get("event", "").strip().lower()
-    play = data.get("play", "").strip().upper()
+    ticker = str(data.get("ticker", "")).strip()
     alert_time = data.get("time", "")
     if not ticker:
         return jsonify({"error": "Missing ticker"}), 400
     inst = get_or_create_instrument(ticker)
     inst["lastUpdate"] = alert_time or datetime.now(timezone.utc).isoformat()
 
+    # EZCam V12: several events plus a snapshot in one message
+    if "events" in data or "snapshot" in data:
+        inst["source"] = data.get("source")
+        events = data.get("events") or []
+        for ev in events:
+            if isinstance(ev, dict):
+                apply_event(ticker, str(ev.get("event", "")).strip().lower(),
+                            str(ev.get("play", "") or "").strip().upper(), ev, alert_time)
+        if isinstance(data.get("snapshot"), dict):
+            apply_snapshot(ticker, data["snapshot"])
+        return jsonify({"status": "ok", "ticker": ticker, "events": len(events),
+                        "snapshot": isinstance(data.get("snapshot"), dict)})
+
+    # Legacy V3: one event per message
+    event = str(data.get("event", "")).strip().lower()
+    play = str(data.get("play", "") or "").strip().upper()
+    result, code = apply_event(ticker, event, play, data, alert_time)
+    return jsonify(result), code
+
+
+def apply_snapshot(ticker, snap):
+    """Replace the ticker's state with the indicator's full snapshot (source of truth)."""
+    inst = get_or_create_instrument(ticker)
+    for k in ("range", "width", "dataSource", "price"):
+        if k in snap:
+            inst[k] = snap[k]
+    if isinstance(snap.get("levels"), dict):
+        inst["levels"] = {k: v for k, v in snap["levels"].items() if isinstance(v, (int, float))}
+    active = snap.get("active")
+    active = active.upper() if isinstance(active, str) and active.upper() in PLAY_META else None
+    inst["active"] = active
+    inst["activeDirection"] = PLAY_META[active]["direction"] if active else None
+    inst["activeDesc"] = PLAY_META[active]["desc"] if active else None
+    def plays(key):
+        return [p.upper() for p in (snap.get(key) or []) if isinstance(p, str) and p.upper() in PLAY_META]
+    inst["candidates"] = [p for p in plays("candidates") if p != active]
+    inst["passed"] = plays("passed")
+
+
+def apply_event(ticker, event, play, data, alert_time):
+    """Apply one event. Returns (result, http_code)."""
+    inst = get_or_create_instrument(ticker)
     if event == "entry":
-        result, code = process_entry(ticker, play, alert_time)
-        return jsonify(result), code
+        return process_entry(ticker, play, alert_time)
     elif event == "candidate":
         if play in PLAY_META and play not in inst["candidates"] and play != inst["active"]:
             inst["candidates"].append(play)
@@ -141,9 +188,10 @@ def webhook():
                 inst[k] = data[k]
     elif event == "session_reset":
         reset_session(ticker)
+        inst["lastUpdate"] = alert_time or inst["lastUpdate"]
     else:
-        return jsonify({"error": f"Unknown event: {event}"}), 400
-    return jsonify({"status": "ok", "ticker": ticker, "event": event})
+        return {"error": f"Unknown event: {event}"}, 400
+    return {"status": "ok", "ticker": ticker, "event": event}, 200
 
 
 @app.route("/api/state")
