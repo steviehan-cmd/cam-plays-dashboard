@@ -127,7 +127,68 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .arr.up::after{top:-2px;border-bottom:7px solid var(--c)}
 .arr.dn::before{top:-3.5px}
 .arr.dn::after{bottom:-2px;border-top:7px solid var(--c)}
-@media (max-width:560px){.top-right .clock{display:none}}
+
+/* ---------- tabs (phone) / side by side (PC) ---------- */
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{flex:0 0 auto;font:500 11px var(--ui);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.views{display:grid;gap:12px;align-items:start}
+.views[data-tab="plays"] #view-bias,.views[data-tab="bias"] #view-plays{display:none}
+
+/* ---------- Bias: ticker x timeframe matrix, set by hand ---------- */
+:root{--cell:36px; --up-line:rgba(79,230,166,.36); --down-line:rgba(255,111,136,.40)}
+.pill.saving i,.pill.warn i{background:var(--cand);box-shadow:0 0 5px var(--cand)}
+.pill.err i{background:var(--down);box-shadow:0 0 5px var(--down)}
+.pill.ro i{background:var(--dim);box-shadow:none}
+.reset-wrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 5px);width:170px;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.5);z-index:10}
+.menu .lbl{padding:4px 7px 2px}
+.menu button{display:flex;justify-content:space-between;width:100%;text-align:left;padding:5px 7px;border-radius:7px;font-size:11px}
+.menu button:hover{background:var(--panel)}
+.menu button small{color:var(--dim);font-size:9px}
+.menu button.confirm{background:var(--down);color:var(--on-accent);font-weight:600}
+.menu button.confirm small{color:var(--on-accent)}
+.lg-up svg{color:var(--up)} .lg-down svg{color:var(--down)} .lg-none svg{color:var(--dim)}
+.legend .lg-up svg,.legend .lg-down svg,.legend .lg-none svg{width:7px;height:7px}
+.lg-stale b{color:var(--cand);font-weight:600}
+.mx{display:flex;flex-direction:column;gap:4px}
+.mx-row{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,var(--cell));gap:4px;align-items:center}
+.mx-head .h{text-align:center;line-height:1.05}
+.mx-head .tf{display:block;font:800 11px var(--display)}
+.mx-head .tfl,.mx-head .h-inst{font-size:6.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2)}
+.inst{min-width:0}
+.inst .tk{font:700 12px/1.1 var(--display);letter-spacing:.01em}
+.inst .nm{font-size:8.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile{width:var(--cell);height:var(--cell);border-radius:9px;background:var(--raise);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--dim);transition:border-color .15s,transform .1s}
+.tile:hover{border-color:var(--muted)}
+.tile:active{transform:translateY(1px)}
+.tile.up{border-color:var(--up-line);color:var(--up)}
+.tile.down{border-color:var(--down-line);color:var(--down)}
+.tile.unset{color:var(--line)}
+.bi svg{width:10px;height:10px;display:block}
+.tm{font-size:8px;font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1}
+.stale .tm{color:var(--cand);font-weight:600}
+@keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
+.pop{animation:pop .22s ease-out}
+.pinbox{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.pinbox label{font-size:10px;color:var(--muted)}
+.pinbox input{width:96px;font:500 12px var(--ui);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:3px 7px}
+.pinbox input:focus{outline:2px solid var(--accent-2);outline-offset:0}
+.pinbox .err{font-size:9.5px;color:var(--down);flex-basis:100%}
+.pinbox .err:empty{display:none}
+.bnote{font-size:9.5px;color:var(--cand)}
+.bnote:empty{display:none}
+
+/* PC: both panels side by side, no tab bar; script scales the page up to 150% (less if the window is too small) */
+@media (min-width:980px){
+  .wrap{max-width:960px}
+  header.top{width:100%;max-width:912px;margin:0 auto}
+  nav.tabs{display:none}
+  .views{grid-template-columns:minmax(0,600px) 300px;justify-content:center}
+  .views[data-tab] #view-bias,.views[data-tab] #view-plays{display:flex}
+}
+@media (max-width:560px){.top-right .clock{display:none} :root{--cell:40px}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}.tile{transition:none}}
 </style>
 </head>
 <body>
@@ -141,7 +202,13 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
     </div>
   </header>
 
-  <section class="panel" aria-label="Cam plays">
+  <nav class="tabs" role="tablist" id="tabs" aria-label="Panels">
+    <button role="tab" data-tab="plays" aria-selected="true">Cam Plays</button>
+    <button role="tab" data-tab="bias" aria-selected="false">Bias</button>
+  </nav>
+
+  <div class="views" id="views" data-tab="plays">
+  <section id="view-plays" class="panel" aria-label="Cam plays">
     <div class="panel-h">
       <div><div class="lbl">Pivot tracker</div><h2>Cam Plays</h2></div>
       <div class="right">
@@ -151,7 +218,7 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
     </div>
     <div class="ladder-scroll"><div class="ladder" id="plays"></div></div>
     <div class="foot">
-      <div class="foot-body" id="footBody">
+      <div class="foot-body">
         <div class="legend">
           <span><i class="lg-px"></i>Price</span>
           <span><i class="lg-rail"></i>Today's low to high</span>
@@ -178,9 +245,53 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
         </div>
         <div class="notes"><span>Dot = entry pivot, arrowhead = target</span><span id="status">Connecting…</span></div>
       </div>
-      <button class="tg" id="tgKey" aria-pressed="true" aria-label="Hide legend and footer" title="Hide legend and footer"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.9"/><path d="M6 5.4v3"/><circle cx="6" cy="3.6" r=".55" fill="currentColor" stroke="none"/></svg></button>
+      <button class="tg" aria-pressed="true" aria-label="Hide legend and footer" title="Hide legend and footer"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.9"/><path d="M6 5.4v3"/><circle cx="6" cy="3.6" r=".55" fill="currentColor" stroke="none"/></svg></button>
     </div>
   </section>
+
+  <section id="view-bias" class="panel" aria-label="Bias">
+    <div class="panel-h">
+      <div><div class="lbl">Manual bias</div><h2>Bias by timeframe</h2></div>
+      <div class="right">
+        <span class="pill ro" id="saved"><i></i><span>Loading</span></span>
+        <div class="reset-wrap">
+          <button class="mini" id="resetBtn" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"/><path d="M2.5 2.5v3h3"/></svg>Reset</button>
+          <div class="menu" id="menu" hidden>
+            <div class="lbl">Clear bias for</div>
+            <button data-r="M15">M15 only <small>8 cells</small></button>
+            <button data-r="H1,M15">H1 + M15 <small>16 cells</small></button>
+            <button data-r="D1,H1,M15">D1 + H1 + M15 <small>24 cells</small></button>
+            <button data-r="W1,D1,H1,M15">Everything <small>32 cells</small></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <form class="pinbox" id="pinBox" hidden>
+      <label for="pinIn">PIN to edit Bias on this device</label>
+      <input id="pinIn" type="password" inputmode="numeric" autocomplete="current-password" required>
+      <button class="mini" type="submit">OK</button>
+      <button class="mini" type="button" id="pinCancel">Cancel</button>
+      <span class="err" id="pinErr"></span>
+    </form>
+    <div class="bnote" id="bnote"></div>
+    <div id="board"></div>
+    <div class="foot">
+      <div class="foot-body">
+        <div class="legend">
+          <span class="lg-up"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 1.5 11 10H1z"/></svg>Up</span>
+          <span class="lg-down"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1 2h10L6 10.5z"/></svg>Down</span>
+          <span class="lg-none"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2" y="5.1" width="8" height="1.8" rx=".9"/></svg>Neutral</span>
+          <span class="lg-stale"><b>3h</b>Stale, time to review</span>
+        </div>
+        <div class="notes">
+          <span>Tap a cell to cycle – → ▲ → ▼</span>
+          <span>Stale after: W1 8d · D1 36h · H1 6h · M15 90m</span>
+        </div>
+      </div>
+      <button class="tg" aria-pressed="true" aria-label="Hide legend and footer" title="Hide legend and footer"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.9"/><path d="M6 5.4v3"/><circle cx="6" cy="3.6" r=".55" fill="currentColor" stroke="none"/></svg></button>
+    </div>
+  </section>
+  </div>
 </div>
 
 <script>
@@ -333,15 +444,162 @@ document.getElementById("lgEye").innerHTML = IC.eye;
 document.getElementById("lgOut").innerHTML = IC.out;
 document.getElementById("lgIn").innerHTML = IC.inn;
 function setKey(show){
-  const b = document.getElementById("tgKey");
-  document.getElementById("footBody").hidden = !show;
-  b.setAttribute("aria-pressed", show);
-  const t = show ? "Hide legend and footer" : "Show legend and footer"; b.setAttribute("aria-label", t); b.title = t;
+  // one setting for both panels' legends
+  document.querySelectorAll(".foot-body").forEach(f => f.hidden = !show);
+  const t = show ? "Hide legend and footer" : "Show legend and footer";
+  document.querySelectorAll(".tg").forEach(b => { b.setAttribute("aria-pressed", show); b.setAttribute("aria-label", t); b.title = t; });
   try { localStorage.setItem("td.legend", show ? "1" : "0"); } catch (e) {}
+  fit();
 }
-let keyPref = "1"; try { keyPref = localStorage.getItem("td.legend") ?? "1"; } catch (e) {}
-setKey(keyPref !== "0");
-document.getElementById("tgKey").addEventListener("click", e => setKey(e.currentTarget.getAttribute("aria-pressed") !== "true"));
+document.querySelectorAll(".tg").forEach(b => b.addEventListener("click", e => setKey(e.currentTarget.getAttribute("aria-pressed") !== "true")));
+
+// ---- tabs (phone only; remembered on this device)
+function setTab(tab){
+  document.querySelectorAll("#tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab));
+  document.getElementById("views").dataset.tab = tab;
+  try { localStorage.setItem("td.tab", tab); } catch (e) {}
+}
+document.getElementById("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+// ---- PC size: side by side at 150%, smaller only if the window can't fit it without scrolling
+function fit(){
+  const w = document.querySelector(".wrap");
+  if (window.innerWidth < 980){ w.style.zoom = ""; return; }
+  w.style.zoom = 1;
+  const h = w.getBoundingClientRect().height;
+  w.style.zoom = Math.max(1, Math.min(1.5, window.innerWidth / 980, window.innerHeight / h)).toFixed(3);
+}
+window.addEventListener("resize", fit);
+
+// ================= Bias (set by hand, saved on the server) =================
+const BIAS_TFS = [{k:"W1", l:"Weekly", stale:8*864e5}, {k:"D1", l:"Daily", stale:36*36e5}, {k:"H1", l:"1 Hour", stale:6*36e5}, {k:"M15", l:"15 Min", stale:90*6e4}];
+const NAMES = {"MES1!":"Micro S&P 500","MNQ1!":"Micro Nasdaq 100","MYM1!":"Micro Dow","M2K1!":"Micro Russell 2000","MGC1!":"Micro Gold","SIL1!":"Silver","MCL1!":"Micro Crude Oil","MBT1!":"Micro Bitcoin"};
+const ORDER = ["none","up","down"];
+const BICON = {
+  up: '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 1.5 11 10H1z"/></svg>',
+  down: '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1 2h10L6 10.5z"/></svg>',
+  none: '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2" y="5.1" width="8" height="1.8" rx=".9"/></svg>',
+};
+let bias = {}, biasInfo = null, biasGen = 0, pending = 0, saveErr = "", popCell = null, lastBoard = "";
+const cellOf = (t, k) => (bias[t] && bias[t][k]) || {v:"none", t:null};
+function rel(ms){ const m = Math.floor((Date.now() - ms) / 6e4); if (m < 1) return "now"; if (m < 60) return m + "m"; const h = Math.floor(m / 60); return h < 24 ? h + "h" : Math.floor(h / 24) + "d"; }
+const when = ms => isNaN(ms) ? "never set" : "set " + new Date(ms).toLocaleString([], {weekday:"short", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+
+function renderBias(){
+  let h = `<div class="mx"><div class="mx-row mx-head"><div class="h-inst">Instrument</div>` +
+    BIAS_TFS.map(tf => `<div class="h"><span class="tf">${tf.k}</span><span class="tfl">${tf.l}</span></div>`).join("") + `</div>`;
+  for (const t of TICKERS){
+    h += `<div class="mx-row"><div class="inst"><div class="tk">${esc(t)}</div><div class="nm">${esc(NAMES[t] || "")}</div></div>`;
+    for (const tf of BIAS_TFS){
+      const c = cellOf(t, tf.k), ms = Date.parse(c.t || ""), unset = isNaN(ms);
+      const stale = !unset && c.v !== "none" && Date.now() - ms > tf.stale;
+      const label = `${t} ${tf.k}: ${c.v === "none" ? "neutral" : c.v} · ${when(ms)}${stale ? " · stale" : ""}`;
+      h += `<button class="tile ${c.v}${unset ? " unset" : ""}${stale ? " stale" : ""}" data-t="${esc(t)}" data-f="${tf.k}" title="${esc(label)}" aria-label="${esc(label)}"><span class="bi">${BICON[c.v] || BICON.none}</span><span class="tm">${unset ? "" : rel(ms)}</span></button>`;
+    }
+    h += `</div>`;
+  }
+  h += `</div>`;
+  const board = document.getElementById("board");
+  if (h !== lastBoard){ board.innerHTML = h; lastBoard = h; }
+  if (popCell){
+    const el = board.querySelector(`[data-t="${CSS.escape(popCell[0])}"][data-f="${popCell[1]}"]`);
+    if (el){ el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); el.focus({preventScroll:true}); }
+    popCell = null;
+  }
+}
+
+function setPill(cls, text, tip){
+  const p = document.getElementById("saved");
+  p.className = "pill " + cls; p.lastElementChild.textContent = text; p.title = tip || "";
+}
+function updatePill(){
+  if (pending) return setPill("saving", "Saving…");
+  if (saveErr) return setPill("err", "Not saved", saveErr);
+  if (!biasInfo) return setPill("ro", "Loading");
+  if (!biasInfo.editable) return setPill("ro", "Read-only", "Bias can't be changed: no PIN is set on the server");
+  if (!biasInfo.db) return setPill("warn", "Not stored", biasInfo.error || "No database: changes are lost when the server restarts");
+  setPill("", "Saved", "Bias is saved on the server and shows on all your devices");
+}
+
+// PIN: asked once per device, kept in this browser
+let pinMem = "";
+const getPin = () => { try { return localStorage.getItem("td.biasPin") || pinMem; } catch (e) { return pinMem; } };
+const setPin = v => { pinMem = v; try { v ? localStorage.setItem("td.biasPin", v) : localStorage.removeItem("td.biasPin"); } catch (e) {} };
+let pinThen = null;
+function askPin(then, msg){
+  pinThen = then;
+  const f = document.getElementById("pinBox");
+  f.hidden = false; document.getElementById("pinErr").textContent = msg || "";
+  const i = document.getElementById("pinIn"); i.value = ""; i.focus();
+}
+function closePin(){ document.getElementById("pinBox").hidden = true; pinThen = null; }
+document.getElementById("pinCancel").addEventListener("click", closePin);
+document.getElementById("pinBox").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = document.getElementById("pinIn").value.trim(), err = document.getElementById("pinErr");
+  if (!v) return;
+  err.textContent = "Checking…";
+  try {
+    const r = await fetch(API + "/api/bias/pin", {method:"POST", headers:{"X-Bias-Pin": v}});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok){ err.textContent = d.error || "PIN not accepted"; return; }
+    setPin(v);
+    const then = pinThen; closePin(); if (then) then();
+  } catch (x) { err.textContent = "No connection, try again"; }
+});
+
+function note(text){ document.getElementById("bnote").textContent = text || ""; }
+function edit(changes, cell){
+  note("");
+  if (!biasInfo || !biasInfo.editable){ note(biasInfo ? "Bias is read-only: no PIN is set on the server." : "Still loading…"); return; }
+  if (!getPin()){ askPin(() => edit(changes, cell)); return; }
+  biasGen++;
+  const now = new Date().toISOString();
+  for (const c of changes) (bias[c.ticker] ||= {})[c.tf] = {v: c.clear ? "none" : c.v, t: c.clear ? null : now};
+  popCell = cell; renderBias(); save(changes);
+}
+let queue = Promise.resolve();
+function save(changes){
+  pending++; updatePill();
+  queue = queue.then(async () => {
+    let r = null, d = {};
+    try {
+      r = await fetch(API + "/api/bias", {method:"POST", headers:{"Content-Type":"application/json", "X-Bias-Pin": getPin()}, body: JSON.stringify({changes})});
+      d = await r.json().catch(() => ({}));
+    } catch (e) {}
+    pending--;
+    if (r && r.ok){ saveErr = ""; }
+    else {
+      saveErr = (d && d.error) || "No connection to the server";
+      biasGen++;  // drop the unsaved change: the next poll shows what the server really has
+      if (r && r.status === 401){ setPin(""); askPin(null, "PIN not accepted, enter it again"); }
+    }
+    updatePill();
+  });
+}
+document.getElementById("board").addEventListener("click", e => {
+  const b = e.target.closest("[data-t]"); if (!b) return;
+  const t = b.dataset.t, k = b.dataset.f, c = cellOf(t, k);
+  edit([{ticker:t, tf:k, v: ORDER[(ORDER.indexOf(c.v) + (e.shiftKey ? 2 : 1)) % 3]}], [t, k]);
+});
+
+// Reset menu: tap a choice, then tap it again to confirm
+const menu = document.getElementById("menu"), resetBtn = document.getElementById("resetBtn");
+let armed = null;
+menu.querySelectorAll("button").forEach(b => b.dataset.orig = b.firstChild.textContent);
+function disarm(){ armed = null; menu.querySelectorAll("button").forEach(b => { b.classList.remove("confirm"); b.firstChild.textContent = b.dataset.orig; }); }
+function showMenu(show){ menu.hidden = !show; resetBtn.setAttribute("aria-expanded", show); disarm(); }
+resetBtn.addEventListener("click", e => { e.stopPropagation(); showMenu(menu.hidden); });
+menu.addEventListener("click", e => {
+  e.stopPropagation();
+  const b = e.target.closest("button[data-r]"); if (!b) return;
+  if (armed !== b){ disarm(); armed = b; b.classList.add("confirm"); b.firstChild.textContent = "Tap again to clear "; return; }
+  const changes = [];
+  for (const t of TICKERS) for (const k of b.dataset.r.split(",")) changes.push({ticker:t, tf:k, clear:true});
+  showMenu(false); edit(changes, null);
+});
+document.addEventListener("click", () => { if (!menu.hidden) showMenu(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape"){ if (!menu.hidden) showMenu(false); closePin(); } });
 
 // ---- polling
 function setLive(ok, text){
@@ -349,12 +607,19 @@ function setLive(ok, text){
   p.classList.toggle("off", !ok); p.lastElementChild.textContent = ok ? "Live" : "Offline";
   document.getElementById("status").textContent = text;
 }
+let fitted = false;
 async function poll(){
+  const gen = biasGen;
   try {
     const r = await fetch(API + "/api/state", {cache: "no-store"});
     if (!r.ok) throw new Error(r.status);
     const d = await r.json(), list = d.instruments || [];
     render(list, d.serverTime); checkNew(list);
+    // Bias from the server, unless a change made here is still being saved
+    biasInfo = d.biasInfo || {db:false, editable:false};
+    if (d.bias && !pending && gen === biasGen) bias = d.bias;
+    renderBias(); updatePill();
+    if (!fitted){ fitted = true; fit(); }
     const latest = Math.max(...list.map(x => Date.parse(x.receivedAt || "")).filter(n => !isNaN(n)));
     const now = Date.parse(d.serverTime || "");
     setLive(true, `Updates every ${POLL / 1000}s` + (isFinite(latest) && !isNaN(now) ? ` · last message ${ageText(Math.max(0, (now - latest) / 1000))}` : " · no messages yet"));
@@ -364,7 +629,11 @@ async function poll(){
 }
 function tick(){ document.getElementById("clock").textContent = new Date().toLocaleTimeString("en-GB", {hour12: false}); }
 setInterval(tick, 1000); tick();
-render([]); poll(); setInterval(poll, POLL);
+let keyPref = "1", tabPref = "plays";
+try { keyPref = localStorage.getItem("td.legend") ?? "1"; tabPref = localStorage.getItem("td.tab") || "plays"; } catch (e) {}
+setTab(tabPref === "bias" ? "bias" : "plays");
+render([]); renderBias(); setKey(keyPref !== "0");
+poll(); setInterval(poll, POLL);
 </script>
 </body>
 </html>
