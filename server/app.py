@@ -6,7 +6,7 @@ Supports three alert formats:
 1. EZCam V12 (one message per bar close, events + full snapshot):
    {"source":"EZCam V12","v":1,"ticker":"MES1!","time":"...",
     "events":[{"event":"entry","play":"HA"}, ...],
-    "snapshot":{"range":"Higher Range","width":"Wide pivots","dataSource":"Daily","price":5858.25,
+    "snapshot":{"range":"Higher Range","width":"Wide pivots","dataSource":"Daily","price":5858.25,"dayHigh":5862.0,"dayLow":5832.0,
                 "levels":{"S6":..,"S5":..,"S4":..,"S3":..,"CP":..,"R3":..,"R4":..,"R5":..,"R6":..},
                 "active":"HA"|null,"candidates":["HB"],"passed":["LA"]}}
 2. Legacy JSON (EZ Cam Dashboard V3): {"ticker":"ES1!","event":"entry","play":"HA","time":"..."}
@@ -70,7 +70,8 @@ def get_or_create_instrument(ticker):
             "active": None, "activeDirection": None, "activeDesc": None,
             "candidates": [], "passed": [],
             "range": None, "width": None, "dataSource": None, "lastUpdate": None,
-            "price": None, "levels": None, "source": None,
+            "price": None, "dayHigh": None, "dayLow": None, "levels": None, "source": None,
+            "receivedAt": None,  # server time (UTC) of the last webhook for this ticker: the dashboard's feed light
         }
     return instruments[ticker]
 
@@ -79,7 +80,7 @@ def reset_session(ticker):
     inst = get_or_create_instrument(ticker)
     inst.update({"active": None, "activeDirection": None, "activeDesc": None,
                  "candidates": [], "passed": [], "range": None, "width": None,
-                 "dataSource": None, "price": None, "levels": None,
+                 "dataSource": None, "price": None, "dayHigh": None, "dayLow": None, "levels": None,
                  "lastUpdate": datetime.now(timezone.utc).isoformat()})
 
 
@@ -124,6 +125,7 @@ def webhook():
         return jsonify({"error": "Missing ticker"}), 400
     inst = get_or_create_instrument(ticker)
     inst["lastUpdate"] = alert_time or datetime.now(timezone.utc).isoformat()
+    inst["receivedAt"] = datetime.now(timezone.utc).isoformat()
 
     # EZCam V12: several events plus a snapshot in one message
     if "events" in data or "snapshot" in data:
@@ -148,7 +150,7 @@ def webhook():
 def apply_snapshot(ticker, snap):
     """Replace the ticker's state with the indicator's full snapshot (source of truth)."""
     inst = get_or_create_instrument(ticker)
-    for k in ("range", "width", "dataSource", "price"):
+    for k in ("range", "width", "dataSource", "price", "dayHigh", "dayLow"):
         if k in snap:
             inst[k] = snap[k]
     if isinstance(snap.get("levels"), dict):
