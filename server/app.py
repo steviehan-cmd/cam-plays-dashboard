@@ -11,11 +11,22 @@ Supports three alert formats:
                 "active":"HA"|null,"candidates":["HB"],"passed":["LA"]}}
 2. Legacy JSON (EZ Cam Dashboard V3): {"ticker":"ES1!","event":"entry","play":"HA","time":"..."}
 3. Legacy text:  "HA entry event on ES1! at 09:42:00"
+
+Manual Bias (set by the user on the page, ticker x W1/D1/H1/M15 = none/up/down) is kept in memory and
+saved to Supabase so it survives restarts and redeploys. Render environment settings:
+  SUPABASE_URL         https://<project>.supabase.co
+  SUPABASE_SECRET_KEY  the project's secret key (sb_secret_...) or legacy service_role key
+  BIAS_PIN             PIN needed to change Bias (without it, Bias is read-only)
+Without the two Supabase settings Bias still works but is lost on restart.
 """
 
 import os
 import re
 import json
+import hmac
+import time
+import threading
+import urllib.request
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, send_from_directory
 
@@ -24,7 +35,7 @@ app = Flask(__name__, static_folder=os.path.join(os.path.dirname(os.path.abspath
 @app.after_request
 def add_cors(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Bias-Pin"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
@@ -126,6 +137,7 @@ def webhook():
     inst = get_or_create_instrument(ticker)
     inst["lastUpdate"] = alert_time or datetime.now(timezone.utc).isoformat()
     inst["receivedAt"] = datetime.now(timezone.utc).isoformat()
+    bias_keepalive()
 
     # EZCam V12: several events plus a snapshot in one message
     if "events" in data or "snapshot" in data:
@@ -199,7 +211,146 @@ def apply_event(ticker, event, play, data, alert_time):
 @app.route("/api/state")
 def get_state():
     result = sorted(instruments.values(), key=lambda x: x["ticker"])
-    return jsonify({"instruments": result, "serverTime": datetime.now(timezone.utc).isoformat()})
+    bias_retry_load()
+    with bias_lock:
+        b = json.loads(json.dumps(bias))
+    return jsonify({"instruments": result, "serverTime": datetime.now(timezone.utc).isoformat(),
+                    "bias": b, "biasInfo": {"db": bias_db["ok"], "error": bias_db["error"], "editable": bool(BIAS_PIN)}})
+
+
+# ---------------- Manual Bias ----------------
+BIAS_TFS = ("W1", "D1", "H1", "M15")
+BIAS_VALUES = ("none", "up", "down")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_SECRET_KEY", "").strip()
+BIAS_PIN = os.environ.get("BIAS_PIN", "").strip()
+bias = {}                      # {ticker: {tf: {"v": "up"|"down"|"none", "t": iso time set, or None = never set}}}
+bias_lock = threading.Lock()
+bias_db = {"ok": False, "error": None, "lastTry": 0.0, "lastTouch": 0.0}
+pin_fails = {}                 # {ip: [failure times]}: slows down PIN guessing
+
+
+def db_configured():
+    return bool(SUPABASE_URL and SUPABASE_KEY)
+
+
+def sb_request(method, path, body=None, prefer=None):
+    """Call Supabase's REST API (PostgREST) with the secret key. Raises on any HTTP or network error."""
+    headers = {"apikey": SUPABASE_KEY, "Accept": "application/json", "Content-Type": "application/json"}
+    if SUPABASE_KEY.startswith("eyJ"):  # legacy JWT keys also go in Authorization; new sb_secret_ keys must not
+        headers["Authorization"] = "Bearer " + SUPABASE_KEY
+    if prefer:
+        headers["Prefer"] = prefer
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/{path}", data=data, method=method, headers=headers)
+    with urllib.request.urlopen(req, timeout=8) as r:
+        raw = r.read()
+    bias_db["lastTouch"] = time.time()
+    return json.loads(raw) if raw else None
+
+
+def load_bias():
+    global bias
+    blank = {t: {tf: {"v": "none", "t": None} for tf in BIAS_TFS} for t in INSTRUMENT_DEFAULTS}
+    bias_db["lastTry"] = time.time()
+    if not db_configured():
+        with bias_lock:
+            bias = blank
+        bias_db.update(ok=False, error="No database set up: Bias changes are lost when the server restarts")
+        return
+    try:
+        rows = sb_request("GET", "bias?select=ticker,tf,value,set_at")
+        for r in rows or []:
+            if r.get("ticker") in blank and r.get("tf") in BIAS_TFS and r.get("value") in BIAS_VALUES:
+                blank[r["ticker"]][r["tf"]] = {"v": r["value"], "t": r.get("set_at")}
+        with bias_lock:
+            bias = blank
+        bias_db.update(ok=True, error=None)
+    except Exception as e:
+        app.logger.error(f"Bias load failed: {e}")
+        if not bias:
+            with bias_lock:
+                bias = blank
+        bias_db.update(ok=False, error="Database unreachable: showing Bias without saved values, retrying")
+
+
+def bias_retry_load():
+    """After a failed load (e.g. Supabase paused or down), try again at most once a minute."""
+    if db_configured() and not bias_db["ok"] and time.time() - bias_db["lastTry"] > 60:
+        load_bias()
+
+
+def bias_keepalive():
+    """Supabase pauses free projects after a week without requests: touch it once a day (in the background)."""
+    if db_configured() and bias_db["ok"] and time.time() - bias_db["lastTouch"] > 86400:
+        bias_db["lastTouch"] = time.time()
+        def touch():
+            try:
+                sb_request("GET", "bias?select=ticker&limit=1")
+            except Exception as e:
+                app.logger.warning(f"Supabase keep-alive failed: {e}")
+        threading.Thread(target=touch, daemon=True).start()
+
+
+def client_ip():
+    return (request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or "?")
+
+
+def check_pin(pin):
+    """(ok, error, http_code). At most 5 wrong PINs per 15 minutes per address."""
+    if not BIAS_PIN:
+        return False, "Bias is read-only: BIAS_PIN is not set on the server", 403
+    ip, now = client_ip(), time.time()
+    fails = [t for t in pin_fails.get(ip, []) if now - t < 900]
+    pin_fails[ip] = fails
+    if len(fails) >= 5:
+        return False, "Too many wrong PINs, try again in 15 minutes", 429
+    if hmac.compare_digest(str(pin or "").encode(), BIAS_PIN.encode()):
+        return True, None, 200
+    fails.append(now)
+    return False, "Wrong PIN", 401
+
+
+@app.route("/api/bias/pin", methods=["POST"])
+def bias_pin():
+    ok, err, code = check_pin(request.headers.get("X-Bias-Pin"))
+    return jsonify({"ok": ok, "error": err}), code
+
+
+@app.route("/api/bias", methods=["POST"])
+def bias_set():
+    """Body: {"changes": [{"ticker": "MES1!", "tf": "H1", "v": "up"|"down"|"none", "clear": false}, ...]}
+    clear=true resets the cell to 'never set'. Saved to the database first; memory only changes if that worked."""
+    ok, err, code = check_pin(request.headers.get("X-Bias-Pin"))
+    if not ok:
+        return jsonify({"ok": False, "error": err}), code
+    data = request.get_json(silent=True) or {}
+    changes = data.get("changes")
+    if not isinstance(changes, list) or not changes or len(changes) > 64:
+        return jsonify({"ok": False, "error": "No changes"}), 400
+    now = datetime.now(timezone.utc).isoformat()
+    rows = {}
+    for c in changes:
+        if not isinstance(c, dict):
+            return jsonify({"ok": False, "error": "Bad change"}), 400
+        t, tf = c.get("ticker"), c.get("tf")
+        clear = bool(c.get("clear"))
+        v = "none" if clear else c.get("v")
+        if t not in INSTRUMENT_DEFAULTS or tf not in BIAS_TFS or v not in BIAS_VALUES:
+            return jsonify({"ok": False, "error": f"Bad change: {t} {tf} {v}"}), 400
+        rows[(t, tf)] = {"ticker": t, "tf": tf, "value": v, "set_at": None if clear else now}
+    if db_configured():
+        try:
+            sb_request("POST", "bias?on_conflict=ticker,tf", list(rows.values()),
+                       prefer="resolution=merge-duplicates,return=minimal")
+            bias_db.update(ok=True, error=None)
+        except Exception as e:
+            app.logger.error(f"Bias save failed: {e}")
+            return jsonify({"ok": False, "error": "Could not save to the database"}), 502
+    with bias_lock:
+        for r in rows.values():
+            bias.setdefault(r["ticker"], {})[r["tf"]] = {"v": r["value"], "t": r["set_at"]}
+    return jsonify({"ok": True, "saved": db_configured(), "time": now})
 
 @app.route("/api/instruments", methods=["POST"])
 def add_instrument():
@@ -232,6 +383,7 @@ def init_defaults():
         get_or_create_instrument(ticker)
 
 init_defaults()
+load_bias()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
