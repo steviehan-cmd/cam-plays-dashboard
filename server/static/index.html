@@ -77,7 +77,7 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .lg-px{width:16px;border-top:2px solid var(--px)}
 .lg-cp{width:16px;border-top:1px dashed var(--piv)}
 .ladder-scroll{overflow-x:auto}
-.ladder{min-width:320px}
+.ladder{min-width:320px;padding-right:4px}  /* room for markers that stick out of the last ladder */
 .l-cols{display:grid;grid-template-columns:22px repeat(8,minmax(28px,1fr));column-gap:9px}
 .l-head>div,.l-foot>div{text-align:center;padding:3px 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px}
 .l-foot>div{flex-direction:row;justify-content:center;align-items:center;gap:4px}
@@ -87,12 +87,13 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .tkr{font:600 10px/1.25 var(--display);border:1.25px solid transparent;border-radius:999px;padding:0 5px;color:var(--muted)}
 .tkr.off{color:var(--dim)}
 .tkr.pl{border-color:var(--up)} .tkr.ps{border-color:var(--down)}
-/* feed light: small dot on the ticker. green = alert messages arriving, hollow = none for 3+ min in market hours */
+/* feed warning: nothing while alerts arrive; a red "!" badge on the ticker when none came for 3+ min in the message window */
 .tkr{position:relative}
-.tkr.lv::after,.tkr.st::after{content:"";position:absolute;top:-2px;right:-3px;width:4px;height:4px;border-radius:50%}
-.tkr.lv::after{background:var(--up);box-shadow:0 0 3px var(--up-glow)}
-.tkr.st::after{box-shadow:inset 0 0 0 1px var(--dim)}
-.lg-dot{position:relative;display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--up)}
+/* --alert: a true red, kept apart from the pink-red used for shorts / L days */
+:root{--alert:#FF2A2A}
+.tkr.st::after,.lg-warn{content:"!";width:9px;height:9px;border-radius:50%;background:var(--alert);color:var(--bg);font:800 7px/9px var(--ui);text-align:center}
+.tkr.st::after{position:absolute;top:-5px;right:-7px}
+.legend .lg-warn{display:inline-block}
 .ic{width:12px;height:12px;display:block}
 .ic.lg{width:15px;height:15px}
 .ic-slot{height:12px;display:flex;align-items:center;justify-content:center}
@@ -269,7 +270,7 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
           <span><span class="c-eye" id="lgEye"></span>watching</span>
           <span><span class="tkr">MYM</span>target hit</span>
           <span><span class="tkr off">SIL</span>idle / no data</span>
-          <span><i class="lg-dot"></i>alerts arriving</span>
+          <span><span class="lg-warn">!</span>no alerts for 3+ min</span>
         </div>
         <div class="legend">
           <span><span class="chip h">H</span>higher CPR</span>
@@ -412,7 +413,7 @@ const ageText = s => s < 90 ? `${Math.round(s)}s ago` : s < 5400 ? `${Math.round
 function feed(x, now){
   const t = Date.parse(x.receivedAt || ""), age = isNaN(t) || isNaN(now) ? null : Math.max(0, (now - t) / 1000);
   const tip = age === null ? "no alert messages yet" : "last message " + ageText(age);
-  if (age !== null && age < STALE_S) return ["lv", tip];
+  if (age !== null && age < STALE_S) return ["", tip];  // healthy: no mark
   return [isNaN(now) || !inSnapWindow(now) ? "" : "st", tip];
 }
 
