@@ -189,6 +189,41 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 }
 @media (max-width:560px){.top-right .clock{display:none} :root{--cell:40px}}
 @media (prefers-reduced-motion:reduce){.pop{animation:none}.tile{transition:none}}
+
+/* ---------- Play guide: a sheet with one mini ladder per play ---------- */
+.foot-btns{display:flex;gap:6px;flex:none}
+.gbtn{width:20px;height:20px;flex:none;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:var(--raise);color:var(--dim)}
+.gbtn:hover,.tg:hover{color:var(--text)}
+.gbtn svg{width:11px;height:11px}
+.sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-start;justify-content:center;
+  padding:max(12px,env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));
+  background:rgba(6,9,14,.72);overflow-y:auto;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.g-card{position:relative;width:100%;max-width:880px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 14px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+.g-head{display:flex;align-items:flex-start;gap:10px}
+.g-head h2{font:800 16px/1.1 var(--display);margin:0}
+.g-head p{margin:3px 0 0;font-size:11px;color:var(--muted)}
+.g-close{margin-left:auto;width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:var(--raise);color:var(--muted)}
+.g-close:hover{color:var(--text)}
+.g-close svg{width:12px;height:12px}
+.g-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:10.5px;color:var(--muted)}
+.g-key span{display:flex;align-items:center;gap:5px}
+.g-key svg{display:block}
+.g-day{display:flex;flex-direction:column;gap:7px}
+.g-day + .g-day{margin-top:8px;padding-top:16px;border-top:1px solid var(--sep)}
+.g-day-h{display:flex;align-items:center;gap:7px;font:700 12px var(--display);color:var(--text)}
+.g-day-h small{font:400 10.5px var(--ui);color:var(--dim)}
+.g-day-h .chip{font-size:10px;min-width:15px}
+.g-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.play{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:7px 6px 6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.play-t{display:flex;align-items:baseline;gap:5px;min-width:0}
+.play-t b{font:800 14px/1 var(--display)}
+.play-t b.long{color:var(--up)} .play-t b.short{color:var(--down)}
+.play-t span{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.play svg.lad{width:100%;height:auto;display:block}
+.play-w{display:flex;align-items:center;gap:3px;font-size:9.5px;color:var(--dim);white-space:nowrap}
+.play-w .ic.lg{width:13px;height:13px}
+.g-note{font-size:10.5px;color:var(--dim);line-height:1.45;border-top:1px solid var(--sep);padding-top:9px}
+@media (max-width:720px){.g-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -245,7 +280,7 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
         </div>
         <div class="notes"><span>Dot = entry pivot, arrowhead = target</span><span id="status">Connecting…</span></div>
       </div>
-      <button class="tg" aria-pressed="true" aria-label="Hide legend and footer" title="Hide legend and footer"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.9"/><path d="M6 5.4v3"/><circle cx="6" cy="3.6" r=".55" fill="currentColor" stroke="none"/></svg></button>
+      <div class="foot-btns"><button class="gbtn" id="gBtn" aria-label="Play guide" title="Play guide"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.2 2.5h4.6M1.2 6h4.6M1.2 9.5h4.6"/><path d="M9.3 10.2V2M7.7 3.6 9.3 2l1.6 1.6"/></svg></button><button class="tg" aria-pressed="true" aria-label="Hide legend and footer" title="Hide legend and footer"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.9"/><path d="M6 5.4v3"/><circle cx="6" cy="3.6" r=".55" fill="currentColor" stroke="none"/></svg></button></div>
     </div>
   </section>
 
@@ -291,6 +326,26 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
       <button class="tg" aria-pressed="true" aria-label="Hide legend and footer" title="Hide legend and footer"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.9"/><path d="M6 5.4v3"/><circle cx="6" cy="3.6" r=".55" fill="currentColor" stroke="none"/></svg></button>
     </div>
   </section>
+  </div>
+</div>
+
+
+<div class="sheet" id="guide" hidden>
+  <div class="g-card" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+    <div class="g-head">
+      <div><div class="lbl">Pivot tracker</div><h2 id="gTitle">Play guide</h2><p>The 12 plays. Each drawing is one ticker's ladder, S6 at the bottom to R6 at the top.</p></div>
+      <button class="g-close" id="gClose" aria-label="Close play guide" title="Close"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
+    </div>
+    <div class="g-key" id="gKey"></div>
+    <div class="g-day">
+      <div class="g-day-h"><span class="chip h">H</span>H days <small>today's CPR higher than yesterday's</small></div>
+      <div class="g-grid" id="gH"></div>
+    </div>
+    <div class="g-day">
+      <div class="g-day-h"><span class="chip l">L</span>L days <small>today's CPR lower than yesterday's</small></div>
+      <div class="g-grid" id="gL"></div>
+    </div>
+    <div class="g-note">With the CPR filter on: H days allow only H plays and L days only L plays (a neutral day allows both). A narrow CPR allows only plays that trade outwards (B, C, D); a wide CPR only plays that trade inwards (A, E). F plays are allowed at any width. A play enters when a bar touches the entry pivot and ends at the target, or fails when a bar closes back beyond the entry pivot.</div>
   </div>
 </div>
 
@@ -637,6 +692,85 @@ try { keyPref = localStorage.getItem("td.legend") ?? "1"; tabPref = localStorage
 setTab(tabPref === "bias" ? "bias" : "plays");
 render([]); renderBias(); setKey(keyPref !== "0");
 poll(); setInterval(poll, POLL);
+
+// ================= Play guide =================
+// Slots on the drawing: S6 0 … S3 3, CP 4 (drawn in the middle), R3 5 … R6 8.
+// sweep = where price must have been first: "cp" = near CP (between S1 and R1), or a [from, to] slot range.
+const GUIDE = [
+  // code, name,             entry, target, width,    sweep
+  ["HA", "Range buy",       "S3", "R3", "wide",   "cp"],
+  ["HB", "Breakout buy",    "R4", "R6", "narrow", "cp"],
+  ["HC", "Pullback buy",    "R4", "R6", "narrow", [7, 8]],
+  ["HD", "Pullback sell",   "S4", "S6", "narrow", [0, 1]],
+  ["HE", "Fade R4",         "R4", "S4", "wide",   "cp"],
+  ["HF", "Fade R6",         "R6", "CP", "any",    [6, 7]],
+  ["LA", "Range sell",      "R3", "S3", "wide",   "cp"],
+  ["LB", "Breakdown sell",  "S4", "S6", "narrow", "cp"],
+  ["LC", "Pullback sell",   "S4", "S6", "narrow", [0, 1]],
+  ["LD", "Pullback buy",    "R4", "R6", "narrow", [7, 8]],
+  ["LE", "Fade S4",         "S4", "R4", "wide",   "cp"],
+  ["LF", "Fade S6",         "S6", "CP", "any",    [1, 2]],
+];
+const GSLOT = {S6:0, S5:1, S4:2, S3:3, CP:4, R3:5, R4:6, R5:7, R6:8};
+const GY = s => 7 + (8 - s) * 15;          // viewBox 0 0 100 134
+function ladderSvg(entry, target, sweep, dirCls){
+  const col = dirCls === "long" ? "var(--up)" : "var(--down)";
+  const [a, b] = sweep === "cp" ? [3.55, 4.45] : sweep;
+  let s = `<svg class="lad" viewBox="0 0 100 134" aria-hidden="true">`;
+  s += `<rect x="24" y="${GY(b)}" width="72" height="${GY(a) - GY(b)}" rx="2" fill="rgba(247,190,85,.16)"/>`;
+  for (const [k, v] of Object.entries(GSLOT)){
+    const y = GY(v);
+    s += k === "CP"
+      ? `<line x1="24" x2="96" y1="${y}" y2="${y}" stroke="var(--piv)" stroke-width="1" stroke-dasharray="3 3"/>`
+      : `<line x1="24" x2="96" y1="${y}" y2="${y}" stroke="var(--piv)" stroke-width="1"/>`;
+    s += `<text x="19" y="${y + 3}" text-anchor="end" font-size="8.5" font-weight="700" font-family="Baloo 2,Outfit,sans-serif" fill="${k === entry || k === target ? "var(--text)" : "var(--piv)"}">${k}</text>`;
+  }
+  const ye = GY(GSLOT[entry]), yt = GY(GSLOT[target]), up = yt < ye, x = 72;
+  // faint path: price comes from the sweep zone to the entry pivot
+  const ys = (GY(a) + GY(b)) / 2;
+  s += `<path d="M42 ${ys} C 42 ${(ys + ye) / 2}, ${x} ${(ys + ye) / 2}, ${x} ${ye}" fill="none" stroke="rgba(247,190,85,.55)" stroke-width="1.2" stroke-dasharray="2 2.5"/>`;
+  const tip = up ? yt + 7 : yt - 7;
+  s += `<line x1="${x}" x2="${x}" y1="${ye}" y2="${tip}" stroke="${col}" stroke-width="2.4"/>`;
+  s += `<path d="M${x - 5} ${tip} L${x + 5} ${tip} L${x} ${yt} Z" fill="${col}"/>`;
+  s += `<circle cx="${x}" cy="${ye}" r="4" fill="${col}"/>`;
+  return s + `</svg>`;
+}
+function widthLabel(w){
+  if (w === "narrow") return `<span class="c-out">${IC.out}</span>narrow · outwards`;
+  if (w === "wide") return `<span class="c-in">${IC.inn}</span>wide · inwards`;
+  return `<span class="c-mut">${IC.eq}</span>any width`;
+}
+function renderGuide(){
+  const card = ([code, name, en, tg, w, sw]) => {
+    const d = META[code][0];
+    return `<div class="play"><div class="play-t"><b class="${d}">${code}</b><span>${name}</span></div>${ladderSvg(en, tg, sw, d)}<div class="play-w">${widthLabel(w)}</div></div>`;
+  };
+  document.getElementById("gH").innerHTML = GUIDE.filter(g => g[0][0] === "H").map(card).join("");
+  document.getElementById("gL").innerHTML = GUIDE.filter(g => g[0][0] === "L").map(card).join("");
+  const arr = c => `<svg width="22" height="10" viewBox="0 0 22 10"><circle cx="3.5" cy="5" r="3" fill="${c}"/><line x1="4" x2="16" y1="5" y2="5" stroke="${c}" stroke-width="2"/><path d="M15 1 L21 5 L15 9 Z" fill="${c}"/></svg>`;
+  document.getElementById("gKey").innerHTML =
+    `<span>${arr("var(--up)")}Long</span><span>${arr("var(--down)")}Short</span>` +
+    `<span>Dot = entry pivot, arrowhead = target</span>` +
+    `<span><svg width="16" height="10" viewBox="0 0 16 10"><rect x="0" y="1" width="16" height="8" rx="2" fill="rgba(247,190,85,.28)"/></svg>Price must have been here first</span>` +
+    `<span><svg width="16" height="4" viewBox="0 0 16 4"><line x1="0" x2="16" y1="2" y2="2" stroke="var(--piv)" stroke-dasharray="3 3"/></svg>CP</span>`;
+}
+let guideFrom = null;
+function openGuide(e){
+  guideFrom = e && e.currentTarget;
+  renderGuide();
+  // same size as the page (150% on PC)
+  document.querySelector(".g-card").style.zoom = document.querySelector(".wrap").style.zoom || "";
+  document.getElementById("guide").hidden = false;
+  document.getElementById("gClose").focus();
+}
+function closeGuide(){
+  const g = document.getElementById("guide"); if (g.hidden) return;
+  g.hidden = true; if (guideFrom) guideFrom.focus();
+}
+document.getElementById("gBtn").addEventListener("click", openGuide);
+document.getElementById("gClose").addEventListener("click", closeGuide);
+document.getElementById("guide").addEventListener("click", e => { if (e.target.id === "guide") closeGuide(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeGuide(); });
 </script>
 </body>
 </html>
