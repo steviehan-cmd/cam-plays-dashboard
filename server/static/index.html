@@ -225,14 +225,14 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
           <span><i class="lg-arr" style="--c:var(--up)"></i>Active long</span>
           <span><i class="lg-arr" style="--c:var(--down)"></i>Active short</span>
           <span><i class="lg-arr dash" style="--c:var(--cand-f)"></i>Candidate</span>
-          <span><i class="lg-arr" style="--c:var(--done)"></i>Completed</span>
+          <span><i class="lg-arr" style="--c:var(--done)"></i>Last target hit</span>
           <span><i class="lg-cp"></i>CP</span>
         </div>
         <div class="legend">
           <span><span class="tkr pl">MES</span>active long</span>
           <span><span class="tkr ps">MCL</span>active short</span>
           <span><span class="c-eye" id="lgEye"></span>watching</span>
-          <span><span class="tkr">MYM</span>completed</span>
+          <span><span class="tkr">MYM</span>target hit</span>
           <span><span class="tkr off">SIL</span>idle / no data</span>
           <span><i class="lg-dot"></i>alerts arriving</span>
         </div>
@@ -317,7 +317,9 @@ const EYE = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-w
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const hasLevels = L => L && RUNGS.every(k => typeof L[k] === "number");
-const statusOf = x => x.active ? "active" : (x.candidates||[]).length ? "candidate" : (x.passed||[]).length ? "passed" : "idle";
+// Latest play this session that reached its target (failed plays are not shown)
+const lastWin = x => [...(x.exits || [])].reverse().find(e => e.result === "target" && META[e.play]);
+const statusOf = x => x.active ? "active" : (x.candidates||[]).length ? "candidate" : lastWin(x) ? "passed" : "idle";
 
 function pos(L, v){
   if (v <= L.S6) return 0;
@@ -386,7 +388,8 @@ function render(list, serverTime){
     const ps = [];
     if (x.active && META[x.active]) ps.push([x.active, "act"]);
     (x.candidates || []).forEach(c => META[c] && ps.push([c, "cand"]));
-    if (!ps.length) (x.passed || []).forEach(c => META[c] && ps.push([c, "pass"]));  // completed only when nothing live
+    const win = lastWin(x);
+    if (!ps.length && win) ps.push([win.play, "pass"]);  // only when nothing live: the latest play that hit its target
     const shown = ps.slice(0, 4), lanes = LANES[shown.length] || [];
     let c = grid;
     if (typeof x.dayHigh === "number" && typeof x.dayLow === "number"){

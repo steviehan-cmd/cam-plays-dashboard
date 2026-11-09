@@ -83,6 +83,9 @@ def get_or_create_instrument(ticker):
             "range": None, "width": None, "dataSource": None, "lastUpdate": None,
             "price": None, "dayHigh": None, "dayLow": None, "levels": None, "source": None,
             "receivedAt": None,  # server time (UTC) of the last webhook for this ticker: the dashboard's feed light
+            # Plays that ended this session, oldest first: {"play", "result": "target"|"failed"|None (V3), "time"}.
+            # The snapshot's "passed" list doesn't say how a play ended; the exit events do.
+            "exits": [],
         }
     return instruments[ticker]
 
@@ -92,6 +95,7 @@ def reset_session(ticker):
     inst.update({"active": None, "activeDirection": None, "activeDesc": None,
                  "candidates": [], "passed": [], "range": None, "width": None,
                  "dataSource": None, "price": None, "dayHigh": None, "dayLow": None, "levels": None,
+                 "exits": [],
                  "lastUpdate": datetime.now(timezone.utc).isoformat()})
 
 
@@ -190,6 +194,11 @@ def apply_event(ticker, event, play, data, alert_time):
         if play in inst["candidates"]:
             inst["candidates"].remove(play)
     elif event == "exit":
+        if play in PLAY_META:
+            result = str(data.get("result", "") or "").strip().lower()
+            inst["exits"] = (inst.get("exits") or [])[-19:] + [{
+                "play": play, "result": result if result in ("target", "failed") else None,
+                "time": alert_time or datetime.now(timezone.utc).isoformat()}]
         if inst["active"] == play:
             if play not in inst["passed"]:
                 inst["passed"].append(play)
