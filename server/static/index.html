@@ -215,7 +215,9 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 .g-day-h small{font:400 10.5px var(--ui);color:var(--dim)}
 .g-day-h .chip{font-size:10px;min-width:15px}
 .g-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
-.play{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:7px 6px 6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.play{width:100%;text-align:left;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:7px 6px 6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.play:hover{border-color:var(--dim)}
+.play[aria-pressed="true"]{border-color:var(--accent-2);box-shadow:inset 0 0 0 1px var(--accent-2)}
 .play-t{display:flex;align-items:baseline;gap:5px;min-width:0}
 .play-t b{font:800 14px/1 var(--display)}
 .play-t b.long{color:var(--up)} .play-t b.short{color:var(--down)}
@@ -223,8 +225,30 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 .play svg.lad{width:100%;height:auto;display:block}
 .play-w{display:flex;align-items:center;gap:3px;font-size:9.5px;color:var(--dim);white-space:nowrap}
 .play-w .ic.lg{width:13px;height:13px}
-.g-note{font-size:10.5px;color:var(--dim);line-height:1.45;border-top:1px solid var(--sep);padding-top:9px}
+.g-new{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:10px;color:var(--cand);border:1px solid rgba(247,190,85,.45);border-radius:999px;padding:1px 8px}
+.g-new i{width:6px;height:6px;border-radius:50%;background:var(--cand)}
+/* rules of the tapped play, under its grid */
+.g-det{background:var(--raise);border:1px solid var(--accent-2);border-radius:10px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:9px}
+.g-det-t{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.g-det-t b{font:800 18px/1 var(--display)}
+.g-det-t b.long{color:var(--up)} .g-det-t b.short{color:var(--down)}
+.g-det-t .nm{font-weight:600;font-size:12.5px}
+.g-det-t .w{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--dim)}
+.g-det-t .w .ic.lg{width:13px;height:13px}
+.g-badges{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.g-badge{font-size:9.5px;line-height:1;padding:3px 7px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.g-det-b{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:start}
+.g-det-b svg.lad{width:100%;height:auto;display:block}
+.g-det dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;font-size:11.5px;line-height:1.4}
+.g-det dt{color:var(--dim);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding-top:2px;white-space:nowrap}
+.g-det dd{margin:0}
+.g-set{margin-top:8px;padding-top:7px;border-top:1px solid var(--sep);display:flex;gap:3px 12px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);font-weight:600}
+.g-rules{border-top:1px solid var(--sep);padding-top:10px}
+.g-rules h3{font:700 12px var(--display);margin:0 0 5px}
+.g-rules ol{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:var(--muted);line-height:1.45}
+.g-rules ol b{color:var(--text);font-weight:600}
 @media (max-width:720px){.g-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:420px){.g-det-b{grid-template-columns:76px minmax(0,1fr);gap:10px} .g-det dl{grid-template-columns:minmax(0,1fr);gap:1px} .g-det dt{padding-top:5px}}
 </style>
 </head>
 <body>
@@ -334,19 +358,32 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 <div class="sheet" id="guide" hidden>
   <div class="g-card" role="dialog" aria-modal="true" aria-labelledby="gTitle">
     <div class="g-head">
-      <div><div class="lbl">Pivot tracker</div><h2 id="gTitle">Play guide</h2><p>The 12 plays. Each drawing is one ticker's ladder, S6 at the bottom to R6 at the top.</p></div>
+      <div><div class="lbl">Pivot tracker</div><h2 id="gTitle">Play guide</h2><p>The 12 plays. Each drawing is one ticker's ladder, S6 at the bottom to R6 at the top. Tap a play to see its rules.</p><span class="g-new"><i></i>New rules agreed, V12 update coming</span></div>
       <button class="g-close" id="gClose" aria-label="Close play guide" title="Close"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
     </div>
     <div class="g-key" id="gKey"></div>
     <div class="g-day">
       <div class="g-day-h"><span class="chip h">H</span>H days <small>today's CPR higher than yesterday's</small></div>
       <div class="g-grid" id="gH"></div>
+      <div class="g-det" id="gDH" hidden></div>
     </div>
     <div class="g-day">
       <div class="g-day-h"><span class="chip l">L</span>L days <small>today's CPR lower than yesterday's</small></div>
       <div class="g-grid" id="gL"></div>
+      <div class="g-det" id="gDL" hidden></div>
     </div>
-    <div class="g-note">With the CPR filter on: H days allow only H plays and L days only L plays (a neutral day allows both). A narrow CPR allows only plays that trade outwards (B, C, D); a wide CPR only plays that trade inwards (A, E). F plays are allowed at any width. A play enters when a bar touches the entry pivot and ends at the target, or fails when a bar closes back beyond the entry pivot.</div>
+    <div class="g-rules">
+      <h3>Rules for every play</h3>
+      <ol>
+        <li><b>Candle close decides.</b> Fails, cancels and "price has gone beyond" checks use the 1-minute close. Entries and targets trigger when price reaches them.</li>
+        <li><b>Stop</b> = 1.5 × the 5-minute ATR (the average 5-minute candle) beyond the entry pivot, the same for every play. The size is fixed when the play starts.</li>
+        <li>If the entry candle already closes beyond the stop, the play does not start.</li>
+        <li><b>Target zone</b>: getting within 5% of the entry-to-target distance counts as a target hit.</li>
+        <li><b>CPR filter</b>: H days allow H plays, L days allow L plays (a neutral day allows both). Narrow CPR allows B, C, D. Wide CPR allows A, E. F plays run at any width.</li>
+        <li><b>Settings</b>: one stop size (default 1.5 × ATR) and one target zone (default 5%) for all plays. Only the entry buffer is set per play.</li>
+        <li>Everything resets when the new session starts at 18:00 New York.</li>
+      </ol>
+    </div>
   </div>
 </div>
 
@@ -354,8 +391,8 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 const POLL = 2000;
 const API = window.location.origin;
 const TICKERS = ["MES1!","MNQ1!","MYM1!","M2K1!","MGC1!","SIL1!","MCL1!","MBT1!"];
-const META = {LA:["short","R3","S3"],LB:["short","S4","S6"],LC:["short","S4","S6"],LD:["long","R4","R6"],LE:["long","S4","R4"],LF:["long","S6","CP"],
-              HA:["long","S3","R3"],HB:["long","R4","R6"],HC:["long","R4","R6"],HD:["short","S4","S6"],HE:["short","R4","S4"],HF:["short","R6","CP"]};
+const META = {LA:["short","R3","S3"],LB:["short","S4","S6"],LC:["short","S4","S6"],LD:["long","R4","R6"],LE:["long","S4","CP"],LF:["long","S6","CP"],
+              HA:["long","S3","R3"],HB:["long","R4","R6"],HC:["long","R4","R6"],HD:["short","S4","S6"],HE:["short","R4","CP"],HF:["short","R6","CP"]};
 // Rungs evenly spaced with a double gap between S3 and R3. CP = (H+L+C)/3 is not always between S3 and R3,
 // so it is drawn (dashed) at its true position rather than on a fixed rung.
 const RUNGS = ["S6","S5","S4","S3","R3","R4","R5","R6"], SLOT = [0,1,2,3,5,6,7,8], NS = 8;
@@ -696,40 +733,97 @@ poll(); setInterval(poll, POLL);
 
 // ================= Play guide =================
 // Slots on the drawing: S6 0 … S3 3, CP 4 (drawn in the middle), R3 5 … R6 8.
-// sweep = where price must have been first: "cp" = near CP (between S1 and R1), or a [from, to] slot range.
-const GUIDE = [
-  // code, name,             entry, target, width,    sweep
-  ["HA", "Range buy",       "S3", "R3", "wide",   "cp"],
-  ["HB", "Breakout buy",    "R4", "R6", "narrow", "cp"],
-  ["HC", "Pullback buy",    "R4", "R6", "narrow", [7, 8]],
-  ["HD", "Pullback sell",   "S4", "S6", "narrow", [0, 1]],
-  ["HE", "Fade R4",         "R4", "S4", "wide",   "cp"],
-  ["HF", "Fade R6",         "R6", "CP", "any",    [6, 7]],
-  ["LA", "Range sell",      "R3", "S3", "wide",   "cp"],
-  ["LB", "Breakdown sell",  "S4", "S6", "narrow", "cp"],
-  ["LC", "Pullback sell",   "S4", "S6", "narrow", [0, 1]],
-  ["LD", "Pullback buy",    "R4", "R6", "narrow", [7, 8]],
-  ["LE", "Fade S4",         "S4", "R4", "wide",   "cp"],
-  ["LF", "Fade S6",         "S6", "CP", "any",    [1, 2]],
-];
+// Plays are written for H; each L play is the exact mirror ([[H text|L text]], R<->S, H?<->L?).
 const GSLOT = {S6:0, S5:1, S4:2, S3:3, CP:4, R3:5, R4:6, R5:7, R6:8};
 const GY = s => 7 + (8 - s) * 15;          // viewBox 0 0 100 134
-function ladderSvg(entry, target, sweep, dirCls){
-  const col = dirCls === "long" ? "var(--up)" : "var(--down)";
-  const [a, b] = sweep === "cp" ? [3.55, 4.45] : sweep;
-  let s = `<svg class="lad" viewBox="0 0 100 134" aria-hidden="true">`;
-  s += `<rect x="24" y="${GY(b)}" width="72" height="${GY(a) - GY(b)}" rx="2" fill="rgba(247,190,85,.16)"/>`;
+const GCOL = {long:"var(--up)", short:"var(--down)"};
+const GFILL = {long:"rgba(79,230,166,.30)", short:"rgba(255,111,136,.32)"};
+const GH = [
+  {c:"A", name:["Range buy","Range sell"], dir:"long", w:"wide", entry:"S3", target:"R3", entryAt:3, staging:"cp", badges:["repeat"],
+   rules:[
+    ["Staging","Price visits the CP area, between S1 and R1."],
+    ["Watching","Price closes [[below|above]] CP."],
+    ["Entry","Price touches S3."],
+    ["Target","Price reaches the 5% zone before R3."],
+    ["Stop","A candle closes 1.5 average 5-minute candles [[below|above]] S3."],
+    ["After","Can start again after a fresh visit to the staging zone. Done for the day after 3 one-minute closes in a row beyond R4 or S4."]],
+   set:["Stop 1.5 candles","Entry buffer 0%","Target zone 5%"]},
+  {c:"B", name:["Breakout buy","Breakdown sell"], dir:"long", w:"narrow", entry:"R4", target:"R6", entryAt:6, staging:"cp", badges:["5m","once"],
+   rules:[
+    ["Staging","Price visits the CP area, between S1 and R1."],
+    ["Watching","Price closes [[above|below]] R3."],
+    ["Entry","The first 5-minute candle that closes [[above|below]] R4, however far it has run. The dashboard then shows the breakout as active; you choose your own pullback entry."],
+    ["Target","Price reaches the 5% zone before R6."],
+    ["Stop","A candle closes 1.5 average 5-minute candles [[below|above]] R4."],
+    ["After","Done for the day, after a target hit or a fail."]],
+   set:["Stop 1.5 candles","Entry: first 5-minute close","Target zone 5%"]},
+  {c:"C", name:["Pullback buy","Pullback sell"], dir:"long", w:"narrow", entry:"R4", target:"R6", entryAt:6.1, staging:[6.5,7.5], badges:["repeat"],
+   rules:[
+    ["When","Any time, overnight and London included. A move before the open sets it up for the open."],
+    ["Staging","Price is in the band around R5, from the middle of R4–R5 to the middle of R5–R6."],
+    ["Entry","Price [[pulls back down|bounces back up]] to 10% of the R4–R5 gap [[above|below]] R4."],
+    ["Target","Price reaches the 5% zone before R6. If price goes on to touch R6, HF can start."],
+    ["Stop","A candle closes 1.5 average 5-minute candles [[below|above]] R4."],
+    ["After","Can start again every time price goes back into the staging zone and then returns to R4, after a target hit or a fail."]],
+   set:["Stop 1.5 candles","Entry buffer 10%","Target zone 5%"]},
+  {c:"D", name:["Pullback sell","Pullback buy"], dir:"short", w:"narrow", entry:"S4", target:"S6", entryAt:1.9, staging:[0.5,1.5], badges:["repeat"],
+   rules:[
+    ["When","Any time, overnight and London included. A move before the open sets it up for the open."],
+    ["Staging","Price is in the band around S5, from the middle of S4–S5 to the middle of S5–S6."],
+    ["Entry","Price [[bounces back up|pulls back down]] to 10% of the S4–S5 gap [[below|above]] S4."],
+    ["Target","Price reaches the 5% zone before S6."],
+    ["Stop","A candle closes 1.5 average 5-minute candles [[above|below]] S4."],
+    ["After","Can start again every time price goes back into the staging zone and then returns to S4, after a target hit or a fail."]],
+   set:["Stop 1.5 candles","Entry buffer 10%","Target zone 5%"]},
+  {c:"E", name:["Fade R4","Fade S4"], dir:"short", w:"wide", entry:"R4", target:"CP", entryAt:6, staging:"cp", badges:["repeat"],
+   rules:[
+    ["Staging","Price visits the CP area, between S1 and R1."],
+    ["Watching","Price closes between R3 and R4."],
+    ["Entry","Price touches R4."],
+    ["Target","Price reaches the 5% zone before CP."],
+    ["Stop","A candle closes 1.5 average 5-minute candles [[above|below]] R4."],
+    ["After","After a fail: done for the day. After a target hit: can start again after a fresh visit to the staging zone."]],
+   set:["Stop 1.5 candles","Entry buffer 0%","Target zone 5%"]},
+  {c:"F", name:["Fade R6","Fade S6"], dir:"short", w:"any", entry:"R6", target:"CP", entryAt:8, staging:[6,7], badges:["once"],
+   rules:[
+    ["Staging","Price passes through the [[lower|upper]] half of R4–R6."],
+    ["Watching","Price closes [[above|below]] R4."],
+    ["Entry","Price touches R6."],
+    ["Target","Price reaches the 5% zone before CP."],
+    ["Stop","A candle closes 1.5 average 5-minute candles [[above|below]] R6."],
+    ["After","Done for the day, after a target hit or a fail."]],
+   set:["Stop 1.5 candles","Entry buffer 0%","Target zone 5%"]},
+];
+const GBADGE = {once:"once a day", repeat:"can repeat", "5m":"5-minute close"};
+const gMirTxt = (t, L) => t.replace(/\[\[([^|\]]*)\|([^\]]*)\]\]/g, (_, a, b) => L ? b : a)
+  .replace(/\b([RS])([3-6])\b/g, (m, x, n) => L ? (x === "R" ? "S" : "R") + n : m)
+  .replace(/\bH([A-F])\b/g, (m, x) => L ? "L" + x : m);
+const gMirLvl = (k, L) => !L || k === "CP" ? k : (k[0] === "R" ? "S" : "R") + k[1];
+const GPLAYS = [false, true].flatMap(L => GH.map(p => ({
+  code: (L ? "L" : "H") + p.c, name: p.name[L ? 1 : 0], w: p.w, badges: p.badges, set: p.set,
+  dir: L ? (p.dir === "long" ? "short" : "long") : p.dir,
+  entry: gMirLvl(p.entry, L), target: gMirLvl(p.target, L), entryAt: L ? 8 - p.entryAt : p.entryAt,
+  staging: p.staging === "cp" ? "cp" : (L ? [8 - p.staging[1], 8 - p.staging[0]] : p.staging),
+  rules: p.rules.map(([k, v]) => [k, gMirTxt(v, L)]),
+})));
+// One play on a mini ladder: staging zone, path to the entry, arrow to the target, target zone, stop.
+function ladderSvg(p){
+  const col = GCOL[p.dir], [a, b] = p.staging === "cp" ? [3.55, 4.45] : p.staging;
+  let s = `<svg class="lad" viewBox="0 -3 100 140" aria-hidden="true">`;
+  s += `<rect x="24" y="${GY(b)}" width="72" height="${GY(a) - GY(b)}" rx="2" fill="rgba(247,190,85,.18)"/>`;
   for (const [k, v] of Object.entries(GSLOT)){
-    const y = GY(v);
-    s += k === "CP"
-      ? `<line x1="24" x2="96" y1="${y}" y2="${y}" stroke="var(--piv)" stroke-width="1" stroke-dasharray="3 3"/>`
-      : `<line x1="24" x2="96" y1="${y}" y2="${y}" stroke="var(--piv)" stroke-width="1"/>`;
-    s += `<text x="19" y="${y + 3}" text-anchor="end" font-size="8.5" font-weight="700" font-family="Baloo 2,Outfit,sans-serif" fill="${k === entry || k === target ? "var(--text)" : "var(--piv)"}">${k}</text>`;
+    const y = GY(v), on = k === p.entry || k === p.target;
+    s += `<line x1="24" x2="96" y1="${y}" y2="${y}" stroke="var(--piv)" stroke-width="1"${k === "CP" ? ' stroke-dasharray="3 3"' : ""}/>`;
+    s += `<text x="19" y="${y + 3}" text-anchor="end" font-size="8.5" font-weight="700" font-family="Baloo 2,Outfit,sans-serif" fill="${on ? "var(--text)" : "var(--piv)"}">${k}</text>`;
   }
-  const ye = GY(GSLOT[entry]), yt = GY(GSLOT[target]), up = yt < ye, x = 72;
-  // faint path: price comes from the sweep zone to the entry pivot
-  const ys = (GY(a) + GY(b)) / 2;
-  s += `<path d="M42 ${ys} C 42 ${(ys + ye) / 2}, ${x} ${(ys + ye) / 2}, ${x} ${ye}" fill="none" stroke="rgba(247,190,85,.55)" stroke-width="1.2" stroke-dasharray="2 2.5"/>`;
+  const yp = GY(GSLOT[p.entry]), ye = GY(p.entryAt), yt = GY(GSLOT[p.target]), up = yt < ye, x = 70;
+  const tz = Math.max(3, Math.abs(yt - yp) * 0.05);           // target zone: last 5% of the move
+  s += `<rect x="58" y="${up ? yt : yt - tz}" width="24" height="${tz}" fill="${GFILL[p.dir]}"/>`;
+  const ys = up ? yp + 6 : yp - 6;                            // stop, drawn at a fixed distance
+  s += `<line x1="58" x2="82" y1="${ys}" y2="${ys}" stroke="var(--muted)" stroke-width="1.1" stroke-dasharray="2 2"/>`;
+  s += `<path d="M86 ${ys - 2.5} l5 5 M91 ${ys - 2.5} l-5 5" stroke="var(--muted)" stroke-width="1.1"/>`;
+  const yz = (GY(a) + GY(b)) / 2;                             // price comes from the staging zone
+  if (Math.abs(yz - ye) > 4) s += `<path d="M40 ${yz} C 40 ${(yz + ye) / 2}, ${x} ${(yz + ye) / 2}, ${x} ${ye}" fill="none" stroke="rgba(247,190,85,.6)" stroke-width="1.2" stroke-dasharray="2 2.5"/>`;
   const tip = up ? yt + 7 : yt - 7;
   s += `<line x1="${x}" x2="${x}" y1="${ye}" y2="${tip}" stroke="${col}" stroke-width="2.4"/>`;
   s += `<path d="M${x - 5} ${tip} L${x + 5} ${tip} L${x} ${yt} Z" fill="${col}"/>`;
@@ -741,20 +835,40 @@ function widthLabel(w){
   if (w === "wide") return `<span class="c-in">${IC.inn}</span>wide · inwards`;
   return `<span class="c-mut">${IC.eq}</span>any width`;
 }
+let gSel = null;   // the play whose rules are open
+function gDetail(p){
+  return `<div class="g-det-t"><b class="${p.dir}">${p.code}</b><span class="nm">${p.name}</span><span class="w">${widthLabel(p.w)}</span>` +
+    `<span class="g-badges">${p.badges.map(b => `<span class="g-badge">${GBADGE[b]}</span>`).join("")}</span></div>` +
+    `<div class="g-det-b">${ladderSvg(p)}<div><dl>${p.rules.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` +
+    `<div class="g-set">${p.set.map(x => `<span>${x}</span>`).join("")}</div></div></div>`;
+}
 function renderGuide(){
-  const card = ([code, name, en, tg, w, sw]) => {
-    const d = META[code][0];
-    return `<div class="play"><div class="play-t"><b class="${d}">${code}</b><span>${name}</span></div>${ladderSvg(en, tg, sw, d)}<div class="play-w">${widthLabel(w)}</div></div>`;
-  };
-  document.getElementById("gH").innerHTML = GUIDE.filter(g => g[0][0] === "H").map(card).join("");
-  document.getElementById("gL").innerHTML = GUIDE.filter(g => g[0][0] === "L").map(card).join("");
+  const card = p => `<button type="button" class="play" data-p="${p.code}" aria-pressed="${gSel === p.code}" aria-label="${p.code} ${p.name}, show rules">` +
+    `<div class="play-t"><b class="${p.dir}">${p.code}</b><span>${p.name}</span></div>${ladderSvg(p)}<div class="play-w">${widthLabel(p.w)}</div></button>`;
+  for (const side of ["H", "L"]){
+    document.getElementById("g" + side).innerHTML = GPLAYS.filter(p => p.code[0] === side).map(card).join("");
+    const det = document.getElementById("gD" + side), sel = GPLAYS.find(p => p.code === gSel && p.code[0] === side);
+    det.hidden = !sel; det.innerHTML = sel ? gDetail(sel) : "";
+  }
   const arr = c => `<svg width="22" height="10" viewBox="0 0 22 10"><circle cx="3.5" cy="5" r="3" fill="${c}"/><line x1="4" x2="16" y1="5" y2="5" stroke="${c}" stroke-width="2"/><path d="M15 1 L21 5 L15 9 Z" fill="${c}"/></svg>`;
   document.getElementById("gKey").innerHTML =
     `<span>${arr("var(--up)")}Long</span><span>${arr("var(--down)")}Short</span>` +
-    `<span>Dot = entry pivot, arrowhead = target</span>` +
-    `<span><svg width="16" height="10" viewBox="0 0 16 10"><rect x="0" y="1" width="16" height="8" rx="2" fill="rgba(247,190,85,.28)"/></svg>Price must have been here first</span>` +
+    `<span>Dot = entry, arrowhead = target</span>` +
+    `<span><svg width="16" height="10" viewBox="0 0 16 10"><rect x="0" y="1" width="16" height="8" rx="2" fill="rgba(247,190,85,.32)"/></svg>Staging zone</span>` +
+    `<span><svg width="16" height="10" viewBox="0 0 16 10"><rect x="0" y="2.5" width="16" height="5" fill="rgba(79,230,166,.30)"/></svg>Target zone</span>` +
+    `<span><svg width="22" height="10" viewBox="0 0 22 10"><line x1="0" x2="14" y1="5" y2="5" stroke="var(--muted)" stroke-width="1.1" stroke-dasharray="2 2"/><path d="M16 2.5 l5 5 M21 2.5 l-5 5" stroke="var(--muted)" stroke-width="1.1"/></svg>Stop</span>` +
     `<span><svg width="16" height="4" viewBox="0 0 16 4"><line x1="0" x2="16" y1="2" y2="2" stroke="var(--piv)" stroke-dasharray="3 3"/></svg>CP</span>`;
 }
+function pickPlay(e){
+  const b = e.target.closest(".play"); if (!b) return;
+  gSel = gSel === b.dataset.p ? null : b.dataset.p;
+  renderGuide();
+  const nb = document.querySelector(`.play[data-p="${b.dataset.p}"]`); if (nb) nb.focus();
+  const det = document.getElementById("gD" + b.dataset.p[0]);
+  if (!det.hidden) det.scrollIntoView({block: "nearest", behavior: "smooth"});
+}
+document.getElementById("gH").addEventListener("click", pickPlay);
+document.getElementById("gL").addEventListener("click", pickPlay);
 let guideFrom = null;
 function openGuide(e){
   guideFrom = e && e.currentTarget;
