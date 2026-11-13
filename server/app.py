@@ -12,6 +12,10 @@ Supports three alert formats:
 2. Legacy JSON (EZ Cam Dashboard V3): {"ticker":"ES1!","event":"entry","play":"HA","time":"..."}
 3. Legacy text:  "HA entry event on ES1! at 09:42:00"
 
+Play-start log: every play start (entry event) is logged with the server time, kept 36 hours and saved to the
+Supabase table play_starts (ticker, play, started_at) so it survives restarts. /api/state returns it as "log"
+(newest first); the page shows the current session and counts the new active plays on its bell.
+
 Manual Bias (set by the user on the page, ticker x W1/D1/H1/M15 = none/up/down) is kept in memory and
 saved to Supabase so it survives restarts and redeploys. Render environment settings:
   SUPABASE_URL         https://<project>.supabase.co
@@ -27,6 +31,7 @@ import hmac
 import time
 import threading
 import urllib.request
+import urllib.parse
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, send_from_directory
 
@@ -79,6 +84,9 @@ def get_or_create_instrument(ticker):
         instruments[ticker] = {
             "ticker": ticker, "exchange": defaults["exchange"], "name": defaults["name"],
             "active": None, "activeDirection": None, "activeDesc": None,
+            # Server time (UTC) the active play started, from its entry event (or, after a restart, from the
+            # play-start log); None = not known. The page uses it to tell which active plays are new.
+            "activeSince": None,
             "candidates": [], "passed": [],
             "range": None, "width": None, "dataSource": None, "lastUpdate": None,
             "price": None, "dayHigh": None, "dayLow": None, "levels": None, "source": None,
@@ -92,7 +100,7 @@ def get_or_create_instrument(ticker):
 
 def reset_session(ticker):
     inst = get_or_create_instrument(ticker)
-    inst.update({"active": None, "activeDirection": None, "activeDesc": None,
+    inst.update({"active": None, "activeDirection": None, "activeDesc": None, "activeSince": None,
                  "candidates": [], "passed": [], "range": None, "width": None,
                  "dataSource": None, "price": None, "dayHigh": None, "dayLow": None, "levels": None,
                  "exits": [],
@@ -108,6 +116,10 @@ def process_entry(ticker, play, alert_time):
         if inst["active"] not in inst["passed"]:
             inst["passed"].append(inst["active"])
     meta = PLAY_META[play]
+    if inst["active"] != play:
+        started = datetime.now(timezone.utc).isoformat()
+        inst["activeSince"] = started
+        log_start(ticker, play, started)
     inst["active"] = play
     inst["activeDirection"] = meta["direction"]
     inst["activeDesc"] = meta["desc"]
@@ -173,6 +185,9 @@ def apply_snapshot(ticker, snap):
         inst["levels"] = {k: v for k, v in snap["levels"].items() if isinstance(v, (int, float))}
     active = snap.get("active")
     active = active.upper() if isinstance(active, str) and active.upper() in PLAY_META else None
+    if active != inst["active"]:
+        # changed without an entry event (e.g. the server restarted mid-play): take the start time from the log
+        inst["activeSince"] = log_last_start(ticker, active) if active else None
     inst["active"] = active
     inst["activeDirection"] = PLAY_META[active]["direction"] if active else None
     inst["activeDesc"] = PLAY_META[active]["desc"] if active else None
@@ -203,6 +218,7 @@ def apply_event(ticker, event, play, data, alert_time):
             if play not in inst["passed"]:
                 inst["passed"].append(play)
             inst["active"] = None
+            inst["activeSince"] = None
             inst["activeDirection"] = None
             inst["activeDesc"] = None
     elif event == "context":
@@ -217,14 +233,101 @@ def apply_event(ticker, event, play, data, alert_time):
     return {"status": "ok", "ticker": ticker, "event": event}, 200
 
 
+# ---------------- Play-start log ----------------
+LOG_KEEP_S = 36 * 3600          # the page shows the current session (since 18:00 ET); 36 h always covers it
+play_log = []                  # [{"time": iso UTC, "ticker", "play"}], newest first
+log_lock = threading.Lock()
+log_db = {"ok": False, "error": None, "lastTry": 0.0, "lastPrune": 0.0}
+
+
+def _ts(iso):
+    try:
+        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
+
+
+def _log_merge(entries):
+    """Add entries (deduplicated), keep 36 hours, newest first. Call with log_lock held."""
+    seen = {(e["ticker"], e["play"], _ts(e["time"])) for e in play_log}
+    for e in entries:
+        k = (e["ticker"], e["play"], _ts(e["time"]))
+        if k not in seen:
+            seen.add(k)
+            play_log.append(e)
+    cutoff = time.time() - LOG_KEEP_S
+    play_log[:] = sorted((e for e in play_log if _ts(e["time"]) >= cutoff), key=lambda e: _ts(e["time"]), reverse=True)[:300]
+
+
+def log_start(ticker, play, started):
+    """Record a play start in memory and, in the background, in Supabase."""
+    with log_lock:
+        _log_merge([{"time": started, "ticker": ticker, "play": play}])
+    if not db_configured():
+        return
+    def save():
+        try:
+            sb_request("POST", "play_starts", {"ticker": ticker, "play": play, "started_at": started}, prefer="return=minimal")
+            if time.time() - log_db["lastPrune"] > 86400:    # once a day: drop rows older than 3 days
+                log_db["lastPrune"] = time.time()
+                old = datetime.fromtimestamp(time.time() - 3 * 86400, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                sb_request("DELETE", "play_starts?started_at=lt." + old)
+        except Exception as e:
+            app.logger.error(f"Play-start save failed: {e}")
+            log_db.update(ok=False, error="Could not save play starts to the database")
+    threading.Thread(target=save, daemon=True).start()
+
+
+def log_last_start(ticker, play):
+    """Start time of the latest logged start of this play on this ticker, or None."""
+    with log_lock:
+        for e in play_log:
+            if e["ticker"] == ticker and e["play"] == play:
+                return e["time"]
+    return None
+
+
+def load_log():
+    """Load the last 36 hours of play starts from Supabase (at startup, then retried after a failure)."""
+    log_db["lastTry"] = time.time()
+    if not db_configured():
+        log_db.update(ok=False, error="No database set up: the play-start log is lost when the server restarts")
+        return
+    try:
+        since = datetime.fromtimestamp(time.time() - LOG_KEEP_S, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows = sb_request("GET", "play_starts?select=ticker,play,started_at&started_at=gte." + urllib.parse.quote(since)
+                          + "&order=started_at.desc&limit=300")
+        entries = [{"time": r["started_at"], "ticker": r["ticker"], "play": r["play"]}
+                   for r in rows or [] if r.get("play") in PLAY_META and r.get("ticker") and r.get("started_at")]
+        with log_lock:
+            _log_merge(entries)
+        # plays already active (seen before the log loaded) get their start time back
+        for inst in instruments.values():
+            if inst["active"] and not inst.get("activeSince"):
+                inst["activeSince"] = log_last_start(inst["ticker"], inst["active"])
+        log_db.update(ok=True, error=None)
+    except Exception as e:
+        app.logger.error(f"Play-start log load failed: {e}")
+        log_db.update(ok=False, error="Database unreachable: the play-start log only has starts since the server started")
+
+
+def log_retry_load():
+    if db_configured() and not log_db["ok"] and time.time() - log_db["lastTry"] > 60:
+        threading.Thread(target=load_log, daemon=True).start()
+
+
 @app.route("/api/state")
 def get_state():
     result = sorted(instruments.values(), key=lambda x: x["ticker"])
     bias_retry_load()
+    log_retry_load()
+    with log_lock:
+        log = list(play_log)
     with bias_lock:
         b = json.loads(json.dumps(bias))
     return jsonify({"instruments": result, "serverTime": datetime.now(timezone.utc).isoformat(),
-                    "bias": b, "biasInfo": {"db": bias_db["ok"], "error": bias_db["error"], "editable": bool(BIAS_PIN)}})
+                    "bias": b, "biasInfo": {"db": bias_db["ok"], "error": bias_db["error"], "editable": bool(BIAS_PIN)},
+                    "log": log, "logInfo": {"db": log_db["ok"], "error": log_db["error"]}})
 
 
 # ---------------- Manual Bias ----------------
@@ -393,6 +496,7 @@ def init_defaults():
 
 init_defaults()
 load_bias()
+load_log()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
