@@ -86,6 +86,8 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 /* ticker: neutral text; green/red outline = active long/short; dim = idle or no data; faint amber eye above = watching */
 .tkr{font:600 10px/1.25 var(--display);border:1.25px solid transparent;border-radius:999px;padding:0 5px;color:var(--muted)}
 .tkr.off{color:var(--dim)}
+/* New active plays (started since the bell was last opened on this device): small blue dot above the ticker */
+.nd{display:block;width:3.5px;height:3.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 3px rgba(127,178,255,.7);margin-bottom:2px}
 .tkr.pl{border-color:var(--up)} .tkr.ps{border-color:var(--down)}
 /* feed warning: nothing while alerts arrive; a red "!" badge on the ticker when none came for 3+ min in the message window */
 .tkr{position:relative}
@@ -98,6 +100,37 @@ header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .ic.lg{width:15px;height:15px}
 .ic-slot{height:12px;display:flex;align-items:center;justify-content:center}
 .c-eye{color:var(--cand-f)}
+/* Bell: count of new active plays; click = log panel (sound switch inside). Amber = the browser is holding sound back. */
+.panel-h .right{position:relative}
+#bell{position:relative;padding:2px 7px}
+#bell svg{width:12px;height:12px;display:block}
+#bell.blk{border-color:var(--cand);color:var(--cand)}
+#bell .badge{position:absolute;top:-4px;right:-4px;min-width:11px;height:11px;padding:0 3px;border-radius:999px;background:var(--accent);color:var(--on-accent);
+  font:800 7.5px/11px var(--display);text-align:center;box-shadow:0 0 0 1.5px var(--panel);font-variant-numeric:tabular-nums;pointer-events:none}
+.logpop{position:absolute;top:calc(100% + 8px);right:0;z-index:40;width:min(280px,86vw);background:var(--raise);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 32px rgba(0,0,0,.45);padding:10px 10px 8px;display:flex;flex-direction:column;gap:8px}
+.lp-h{display:flex;align-items:center;gap:8px}
+.lp-h .lbl{flex:1}
+.sw{display:flex;align-items:center;gap:6px;font:500 10px var(--ui);color:var(--muted);background:none;border:0;padding:0;cursor:pointer}
+.sw i{width:26px;height:15px;border-radius:999px;background:var(--line);position:relative;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--muted);transition:transform .15s}
+.sw[aria-pressed="true"] i{background:var(--accent)} .sw[aria-pressed="true"] i::after{transform:translateX(11px);background:var(--on-accent)}
+.lp-test{font:500 9.5px var(--ui);color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:1px 8px;cursor:pointer}
+.lp-test:hover,.sw:hover{color:var(--text)}
+.lp-note{font-size:10px;color:var(--cand);border:1px dashed rgba(247,190,85,.55);border-radius:8px;padding:3px 8px}
+.lp-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:260px;overflow:auto}
+.lp-list li{display:grid;grid-template-columns:38px 46px 1fr;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;font-size:11px;color:var(--muted)}
+.lp-list li.new{background:rgba(127,178,255,.10);color:var(--text)}
+.lp-list li.done{opacity:.4}
+.lp-list .t{font-variant-numeric:tabular-nums;color:var(--dim);font-size:10.5px}
+.lp-list li.new .t{color:var(--accent-2)}
+.lp-list .k{font:600 10px/1.25 var(--display);text-align:center;border:1.25px solid transparent;border-radius:999px;padding:0 4px;color:var(--muted)}
+.lp-list .k.l{border-color:var(--up)} .lp-list .k.s{border-color:var(--down)}
+.lp-list .n b{font-weight:600} .lp-list .ar.l{color:var(--up)} .lp-list .ar.s{color:var(--down)}
+.lp-list .ago{color:var(--dim);font-size:9.5px;margin-left:4px}
+.lp-empty{font-size:10.5px;color:var(--dim);padding:6px}
+.lp-f{font-size:9px;color:var(--dim)}
+@media (prefers-reduced-motion:reduce){.sw i,.sw i::after{transition:none}}
 .c-out{color:#E7CE3E} .c-in{color:#5A86E6} .c-mut{color:var(--muted)}
 /* CPR direction chip (filled, faded) */
 .chip{display:inline-block;font:800 9px/1.3 var(--display);min-width:13px;border-radius:3px;padding:0 2px;color:var(--bg);text-align:center}
@@ -227,6 +260,7 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 .play-w .ic.lg{width:13px;height:13px}
 .g-new{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:10px;color:var(--cand);border:1px solid rgba(247,190,85,.45);border-radius:999px;padding:1px 8px}
 .g-new i{width:6px;height:6px;border-radius:50%;background:var(--cand)}
+.g-head p.g-sync{margin-top:5px;font-size:10px}
 /* rules of the tapped play, under its grid */
 .g-det{background:var(--raise);border:1px solid var(--accent-2);border-radius:10px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:9px}
 .g-det-t{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
@@ -273,7 +307,8 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
       <div><div class="lbl">Pivot tracker</div><h2>Cam Plays</h2></div>
       <div class="right">
         <div class="stats" id="stats"></div>
-        <button class="mini icon" id="bell" aria-pressed="true" aria-label="Sound on" title="Sound on"></button>
+        <button class="mini icon" id="bell" aria-haspopup="dialog" aria-expanded="false" aria-label="Play starts" title="Play starts"></button>
+        <div class="logpop" id="logPop" role="dialog" aria-label="Play starts this session" hidden></div>
       </div>
     </div>
     <div class="ladder-scroll"><div class="ladder" id="plays"></div></div>
@@ -358,7 +393,7 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 <div class="sheet" id="guide" hidden>
   <div class="g-card" role="dialog" aria-modal="true" aria-labelledby="gTitle">
     <div class="g-head">
-      <div><div class="lbl">Pivot tracker</div><h2 id="gTitle">Play guide</h2><p>The 12 plays. Each drawing is one ticker's ladder, S6 at the bottom to R6 at the top. Tap a play to see its rules.</p><span class="g-new"><i></i>Indicator: EZCam V13 &amp; EZCam V13 Alerts</span></div>
+      <div><div class="lbl">Pivot tracker</div><h2 id="gTitle">Play guide</h2><p>The 12 plays. Each drawing is one ticker's ladder, S6 at the bottom to R6 at the top. Tap a play to see its rules.</p><span class="g-new"><i></i>Indicator: EZCam V13 &amp; EZCam V13 Alerts</span><p class="g-sync">Remember to sync the Stop size in EZCam V13, EZCam V13 Alerts and EZ Things V2.</p></div>
       <button class="g-close" id="gClose" aria-label="Close play guide" title="Close"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
     </div>
     <div class="g-key" id="gKey"></div>
@@ -471,7 +506,7 @@ function render(list, serverTime){
     const tip = `${t}${x.name ? " · " + x.name : ""} · ${ftip}`;
     const L = x.levels, ok = hasLevels(L);
     const tk = (!ok || s === "idle" ? "off" : s === "active" ? (dir === "short" ? "ps" : "pl") : "") + " " + fd;
-    head += `<div title="${esc(tip)}"><span class="ic-slot">${ok && s === "candidate" ? `<span class="c-eye">${IC.eye}</span>` : ""}</span><span class="tkr ${tk}">${esc(t.replace("1!",""))}</span></div>`;
+    head += `<div title="${esc(tip)}"><span class="ic-slot">${ok && s === "candidate" ? `<span class="c-eye">${IC.eye}</span>` : ok && s === "active" && isNewPlay(x) ? `<i class="nd" title="New since you last opened the bell"></i>` : ""}</span><span class="tkr ${tk}">${esc(t.replace("1!",""))}</span></div>`;
     if (!ok){
       foot += `<div class="ne nd">no data</div>`;
       cols += `<div class="col nodata" aria-label="${esc(t)}: no levels yet">${grid}</div>`;
@@ -504,36 +539,117 @@ function render(list, serverTime){
   document.getElementById("stats").innerHTML = `<span class="stat" title="Active plays">${BOLT}<b>${a}</b>active</span><span class="stat" title="Candidates being watched">${EYE}<b>${w}</b>watching</span>`;
 }
 
-// ---- sound + notification on a NEW active play
-let audioOn = true, prevActive = {}, first = true;
-function ping(){
-  if (!audioOn) return;
-  try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain();
-    o.connect(g); g.connect(c.destination); o.frequency.value = 880; o.type = "sine";
-    g.gain.setValueAtTime(0.3, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.5);
-    o.start(c.currentTime); o.stop(c.currentTime + 0.5); } catch (e) {}
+// ---- new plays: bell count, blue dots, log panel, chime, notification
+// "Seen" = when the bell was last opened on this device. An ACTIVE play that started after that is new: it counts on
+// the bell (and in the tab title) and gets a blue dot above its ticker. Opening the bell clears both. Times use the
+// server's clock (play start times come from the server).
+const PNAME = {HA:"range buy",HB:"breakout buy",HC:"pullback buy",HD:"pullback sell",HE:"fade R4",HF:"fade R6",
+               LA:"range sell",LB:"breakdown sell",LC:"pullback sell",LD:"pullback buy",LE:"fade S4",LF:"fade S6"};
+const LONGP = new Set(["HA","HB","HC","LD","LE","LF"]);
+let clockOff = 0;                                   // server time - this device's time
+const srvNow = () => Date.now() + clockOff;
+let lastSeen = null;
+try { const v = Number(localStorage.getItem("td.seen")); if (v > 0) lastSeen = v; } catch (e) {}
+let soundOn = true;
+try { soundOn = localStorage.getItem("td.sound") !== "0"; } catch (e) {}
+const isNewPlay = x => !!(x && x.active && x.activeSince && lastSeen !== null && Date.parse(x.activeSince) > lastSeen);
+let alertData = {list: [], log: [], logInfo: null, serverTime: null}, logOpen = false, seenAtOpen = 0, prevActive = {}, first = true;
+let actx = null;
+try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+const soundBlocked = () => !actx || actx.state !== "running";
+function chime(){
+  if (!soundOn || soundBlocked()) return;
+  const t0 = actx.currentTime;
+  [[784, 0], [1175, .2], [784, .55], [1175, .75]].forEach(([f, d]) => {
+    const o = actx.createOscillator(), g = actx.createGain(); o.type = "triangle"; o.frequency.value = f;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.4, t0 + d + .02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + .32); o.start(t0 + d); o.stop(t0 + d + .34);
+  });
 }
-function checkNew(list){
-  for (const x of list){
+// Start of the current session: the latest 18:00 New York time (CME Globex open)
+function sessionStart(now){
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone: "America/New_York", hourCycle: "h23", year: "numeric",
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit"}).formatToParts(new Date(now)).map(x => [x.type, x.value]));
+  const wall = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second), off = wall - Math.floor(now / 1000) * 1000;
+  let st = Date.UTC(+p.year, +p.month - 1, +p.day, 18);
+  if (+p.hour < 18) st -= 86400000;
+  return st - off;
+}
+const BELL = off => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.2 1.5H2.8z"/><path d="M6.5 14a1.7 1.7 0 0 0 3 0"/>${off ? '<path d="M2 2l12 12"/>' : ""}</svg>`;
+const bell = document.getElementById("bell"), logPop = document.getElementById("logPop");
+const bellIco = document.createElement("span"), bellBadge = document.createElement("span");
+bellIco.style.display = "contents"; bellBadge.className = "badge"; bellBadge.hidden = true;
+bell.replaceChildren(bellIco, bellBadge);       // updated in place from here on: a redraw mid-click would eat the click
+let bellOff = null;
+function drawBell(){
+  const n = alertData.list.filter(isNewPlay).length;
+  if (bellOff !== !soundOn){ bellOff = !soundOn; bellIco.innerHTML = BELL(bellOff); }
+  bellBadge.hidden = !n; bellBadge.textContent = n;
+  const blk = soundOn && soundBlocked();
+  bell.classList.toggle("blk", blk);
+  const t = (n ? `${n} new active play${n > 1 ? "s" : ""} · ` : "") + "Play starts" + (!soundOn ? " · sound off" : blk ? " · sound blocked until you click the page" : "");
+  bell.title = t; bell.setAttribute("aria-label", t);
+  document.title = (n ? `(${n}) ` : "") + "Trade Deck";
+}
+function drawLog(){
+  const now = srvNow(), start = sessionStart(now);
+  const log = alertData.log.filter(e => Date.parse(e.time) >= start && PNAME[e.play]);
+  const hm = t => new Date(t).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", hour12: false});
+  const ago = t => { const s = (now - Date.parse(t)) / 1000; return s < 90 ? "just now" : s < 5400 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago"; };
+  const live = e => { const x = alertData.list.find(i => i.ticker === e.ticker); return !!(x && x.active === e.play && Date.parse(x.activeSince) === Date.parse(e.time)); };
+  const info = alertData.logInfo;
+  logPop.innerHTML = `<div class="lp-h"><div class="lbl">Play starts this session</div>
+      <button type="button" class="sw" id="lpSnd" aria-pressed="${soundOn}"><i></i>Sound</button>
+      <button type="button" class="lp-test" id="lpTest">Test</button></div>`
+    + (soundOn && soundBlocked() ? `<div class="lp-note">The browser is holding the sound back. Click anywhere on the page once to allow it.</div>` : "")
+    + (log.length ? `<ul class="lp-list">` + log.map(e => {
+        const l = LONGP.has(e.play), nw = Date.parse(e.time) > seenAtOpen, on = live(e);
+        return `<li class="${nw ? "new" : ""} ${on ? "" : "done"}" title="${on ? "Still active" : "Ended"}"><span class="t">${hm(e.time)}</span>`
+             + `<span class="k ${l ? "l" : "s"}">${esc(e.ticker.replace("1!", ""))}</span>`
+             + `<span class="n"><b>${PNAME[e.play]}</b> <span class="ar ${l ? "l" : "s"}">${l ? "▲" : "▼"}</span><span class="ago">${ago(e.time)}</span></span></li>`;
+      }).join("") + `</ul>` : `<div class="lp-empty">No plays have started this session.</div>`)
+    + `<div class="lp-f">Highlighted = new since you last looked · faded = ended · clears at the next session (18:00 New York)${info && info.error ? " · " + esc(info.error) : ""}</div>`;
+  logPop.querySelector("#lpSnd").onclick = () => { soundOn = !soundOn; try { localStorage.setItem("td.sound", soundOn ? "1" : "0"); } catch (e) {} drawLog(); drawBell(); };
+  logPop.querySelector("#lpTest").onclick = () => { if (actx && actx.state !== "running") actx.resume(); setTimeout(chime, 60); };
+}
+function setLogOpen(v){
+  if (v === logOpen) return;
+  logOpen = v;
+  if (v){                                        // opening the bell marks everything as seen
+    seenAtOpen = lastSeen === null ? 0 : lastSeen;
+    lastSeen = srvNow();
+    try { localStorage.setItem("td.seen", String(lastSeen)); } catch (e) {}
+    drawLog();
+    if (alertData.serverTime) render(alertData.list, alertData.serverTime);   // clear the dots now
+  }
+  logPop.hidden = !v; bell.setAttribute("aria-expanded", v); drawBell();
+}
+bell.addEventListener("click", e => { e.stopPropagation(); setLogOpen(!logOpen); });
+logPop.addEventListener("click", e => e.stopPropagation());
+document.addEventListener("click", () => setLogOpen(false));
+document.addEventListener("keydown", e => { if (e.key === "Escape") setLogOpen(false); });
+// Browsers only allow sound after a click on the page: the first click (anywhere) turns it on
+document.addEventListener("pointerdown", () => { if (actx && actx.state !== "running") actx.resume().then(() => { drawBell(); if (logOpen) drawLog(); }).catch(() => {}); }, true);
+document.addEventListener("click", () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); }, {once: true});
+// Called after every poll
+function updateAlerts(d){
+  const st = Date.parse(d.serverTime || "");
+  if (!isNaN(st)) clockOff = st - Date.now();
+  if (lastSeen === null){ lastSeen = srvNow(); try { localStorage.setItem("td.seen", String(lastSeen)); } catch (e) {} }   // first visit on this device
+  alertData = {list: d.instruments || [], log: d.log || [], logInfo: d.logInfo || null, serverTime: d.serverTime};
+  for (const x of alertData.list){                // chime + notification when a play starts
     if (!first && x.active && prevActive[x.ticker] !== x.active){
-      ping();
-      if (audioOn && "Notification" in window && Notification.permission === "granted"){
-        const m = META[x.active];
-        new Notification(`Trade Deck: ${x.ticker} ${x.active}`, {body: m ? `${m[1]} → ${m[2]} (${m[0]})` : ""});
-      }
+      chime();
+      if (soundOn && "Notification" in window && Notification.permission === "granted")
+        new Notification("Trade Deck: new play", {body: `${x.ticker.replace("1!", "")} · ${PNAME[x.active] || x.active} ${LONGP.has(x.active) ? "▲" : "▼"}`});
     }
     prevActive[x.ticker] = x.active || null;
   }
   first = false;
+  drawBell(); if (logOpen) drawLog();
 }
-const BELL = off => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.2 1.5H2.8z"/><path d="M6.5 14a1.7 1.7 0 0 0 3 0"/>${off ? '<path d="M2 2l12 12"/>' : ""}</svg>`;
-function setBell(b, on){
-  audioOn = on; b.setAttribute("aria-pressed", on); b.innerHTML = BELL(!on);
-  const t = on ? "Sound on" : "Sound off"; b.setAttribute("aria-label", t); b.title = t;
-}
-setBell(document.getElementById("bell"), true);
-document.getElementById("bell").addEventListener("click", e => setBell(e.currentTarget, e.currentTarget.getAttribute("aria-pressed") !== "true"));
-document.addEventListener("click", () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); }, {once: true});
+drawBell();
 
 // ---- legend & footer toggle (remembered on this device)
 document.getElementById("lgEye").innerHTML = IC.eye;
@@ -710,7 +826,7 @@ async function poll(){
     const r = await fetch(API + "/api/state", {cache: "no-store"});
     if (!r.ok) throw new Error(r.status);
     const d = await r.json(), list = d.instruments || [];
-    render(list, d.serverTime); checkNew(list);
+    updateAlerts(d); render(list, d.serverTime);
     // Bias from the server, unless a change made here is still being saved
     biasInfo = d.biasInfo || {db:false, editable:false};
     if (d.bias && !pending && gen === biasGen) bias = d.bias;
