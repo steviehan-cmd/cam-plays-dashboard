@@ -34,7 +34,8 @@ button:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
 .wrap{max-width:620px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 24px;display:flex;flex-direction:column;gap:10px}
 
 header.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.mark{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(160deg,var(--accent-2),var(--accent));color:var(--on-accent);font:800 10px var(--display);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.mark{width:24px;height:24px;flex:none}
+.mark svg{display:block;width:100%;height:100%}
 .brand h1{font:800 14px/1 var(--display);margin:0;letter-spacing:.01em}
 .brand small{display:block;font-size:7px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent-2);margin-top:2px}
 .top-right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted)}
@@ -292,7 +293,7 @@ nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="mark">TD</div>
+    <div class="mark"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x=".5" y=".5" width="31" height="31" rx="7.5" fill="#0F141C" stroke="#2E3A4B"/><path d="M11.4 5 5.8 16 11.4 27" fill="none" stroke="var(--down)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.4 5 10.8 16 16.4 27" fill="none" stroke="var(--up)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M27.2 16 21.6 27 16 16 21.6 5Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
     <div class="brand"><h1>Trade Deck</h1><small>Plays · Bias</small></div>
     <div class="top-right">
       <span class="pill" id="live"><i></i><span>Connecting</span></span>
